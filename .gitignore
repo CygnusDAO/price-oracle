@@ -1,0 +1,10 @@
+# Node
+node_modules
+
+# Dotenv
+.env
+
+# Hardhat
+cache
+artifacts
+
