@@ -18,19 +18,24 @@ interface IChainlinkNebulaOracle {
     error ChainlinkNebulaOracle__PairAlreadyInitialized(address lpTokenPair);
 
     /**
-     *  @custom:error PairIsInitialized Emitted when attempting to get the price of an LP Token that is not initialized
+     *  @custom:error PairNotInitialized Emitted when attempting to get the price of an LP Token that is not initialized
      */
     error ChainlinkNebulaOracle__PairNotInitialized(address lpTokenPair);
 
     /**
-     *  @custom:error MsgSenderNotAdmin Emitted when attempting to access admin methods only
+     *  @custom:error MsgSenderNotAdmin Emitted when attempting to access admin only methods
      */
     error ChainlinkNebulaOracle__MsgSenderNotAdmin(address msgSender);
 
     /**
-     *  @custom:error MsgSenderNotAdmin Emitted when attempting to access admin methods only
+     *  @custom:error AdminCantBeZero Emitted when attempting to set the admin if the pending admin is the zero address
      */
-    error ChainlinkNebulaOracle__AdminCantBeZero(address msgSender);
+    error ChainlinkNebulaOracle__AdminCantBeZero(address pendingAdmin);
+
+    /**
+     *  @custom:error PendingAdminAlreadySet Emitted when attempting to set the same pending admin twice
+     */
+    error ChainlinkNebulaOracle__PendingAdminAlreadySet(address pendingAdmin);
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             2. CUSTOM EVENTS
@@ -88,6 +93,8 @@ interface IChainlinkNebulaOracle {
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             3. CONSTANT FUNCTIONS
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
+
+    /*  ─────────────────────────────────────────────── Public ────────────────────────────────────────────────  */
 
     /**
      *  @notice Returns the struct record of each oracle used by Cygnus
@@ -156,6 +163,8 @@ interface IChainlinkNebulaOracle {
      */
     function nebulaSize() external view returns (uint24);
 
+    /*  ────────────────────────────────────────────── External ───────────────────────────────────────────────  */
+
     /**
      *  @return The price of DAI with 18 decimals
      */
@@ -172,6 +181,8 @@ interface IChainlinkNebulaOracle {
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             4. NON-CONSTANT FUNCTIONS
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
+
+    /*  ────────────────────────────────────────────── External ───────────────────────────────────────────────  */
 
     /**
      *  @notice Initialize an LP Token pair, only admin

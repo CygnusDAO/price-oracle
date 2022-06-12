@@ -6,7 +6,6 @@ const hre = require('hardhat');
 const chai = require('chai');
 const { expect } = chai;
 const { solidity } = require('ethereum-waffle');
-const { AddressZero } = require('@ethersproject/constants');
 
 // Custom reverts
 const { ChainlinkNebulaErrors } = require('./errors/ChainlinkNebulaErrors.js');
@@ -24,6 +23,8 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
     const rangeMax = BigInt(1.005e18);
 
     const oneMantissa = BigInt(1e18);
+
+    const AddressZero = ethers.constants.AddressZero; 
 
     // LP Token Abi for collateral contracts
     let lpTokenAbi = fs.readFileSync(path.resolve(__dirname, './abis/lptoken.json')).toString();
@@ -127,7 +128,7 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
         const reserves = await LPTokenUsdcAvax.getReserves();
 
         // Update manually or throws errors, usdc
-        const totalSupply = 1.843917;
+        const totalSupply = 1.638831;
 
         // usdc adjust
         const usdcReserves = Number((BigInt(reserves._reserve0) * BigInt(10 ** (18 - 6))) / BigInt(1e18));
@@ -149,11 +150,11 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
      * Update to do fair price and normal price calculations against the on-chain price the oracle returns
      *
      */
-    const joePrice = 0.282936;
+    const joePrice = 0.286410;
 
-    const avaxPrice = 23.85;
+    const avaxPrice = 24.36;
 
-    const ethPrice = 1786.07;
+    const ethPrice = 1802.98;
 
     const usdcPrice = 1;
 

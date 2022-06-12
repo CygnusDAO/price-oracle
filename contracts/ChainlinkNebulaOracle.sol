@@ -69,22 +69,27 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      */
-    string public override name = "Cygnus-Chainlink: LP Oracle";
+    string public constant override name = "Cygnus-Chainlink: LP Oracle";
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      */
-    string public override symbol = "CygNebula";
+    string public constant override symbol = "CygNebula";
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      */
-    uint8 public override decimals = 18;
+    uint8 public constant override decimals = 18;
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      */
-    uint8 public override version = 1;
+    uint8 public constant override version = 1;
+
+    /**
+     *  @inheritdoc IChainlinkNebulaOracle
+     */
+    AggregatorV3Interface public immutable override dai;
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
@@ -95,11 +100,6 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      *  @inheritdoc IChainlinkNebulaOracle
      */
     address public override pendingAdmin;
-
-    /**
-     *  @inheritdoc IChainlinkNebulaOracle
-     */
-    AggregatorV3Interface public immutable override dai;
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             3. CONSTRUCTOR
@@ -139,7 +139,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      *  @notice Internal check for admin control only 👽
      */
     function isCygnusAdmin() internal view {
-        /// @custom:error Avoid unless caller is Cygnus Admin
+        /// @custom:error MsgSenderNotAdmin Avoid unless caller is Cygnus Admin
         if (_msgSender() != admin) {
             revert ChainlinkNebulaOracle__MsgSenderNotAdmin(_msgSender());
         }
@@ -171,7 +171,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      *  @inheritdoc IChainlinkNebulaOracle
      */
     function lpTokenPriceDai(address lpTokenPair) external view override returns (uint256 lpTokenPrice) {
-        // Load oracle to memory
+        // Load to memory
         ChainlinkNebula memory cygnusNebula = getNebula[lpTokenPair];
 
         /// custom:error PairNotInitialized Avoid getting price unless lpTokenPair's price is being tracked
@@ -243,7 +243,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         AggregatorV3Interface aggregatorA,
         AggregatorV3Interface aggregatorB
     ) external override cygnusAdmin nonReentrant {
-        // Record storage
+        // Load to storage
         ChainlinkNebula storage cygnusNebula = getNebula[lpTokenPair];
 
         /// @custom:error PairIsinitialized Avoid duplicate oracle
@@ -281,7 +281,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      *  @custom:security non-reentrant
      */
     function deleteNebula(address lpTokenPair) external override cygnusAdmin nonReentrant {
-        /// @custom:error PairNotinitialized Avoid duplicate oracle
+        /// @custom:error PairNotinitialized Avoid delete if not initialized
         if (!getNebula[lpTokenPair].initialized) {
             revert ChainlinkNebulaOracle__PairNotInitialized(lpTokenPair);
         }
@@ -311,9 +311,9 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      */
     function setOraclePendingAdmin(address newOracleAdmin) external override cygnusAdmin nonReentrant {
         // Pending admin initial is always zero
-        /// @custom:error AdminCantBeZero Avoid setting new oracle admin as the Zero address
+        /// @custom:error PendingAdminAlreadySet Avoid setting the same pending admin twice
         if (newOracleAdmin == pendingAdmin) {
-            revert ChainlinkNebulaOracle__AdminCantBeZero(newOracleAdmin);
+            revert ChainlinkNebulaOracle__PendingAdminAlreadySet(newOracleAdmin);
         }
 
         // Assign address of the requested admin
@@ -328,7 +328,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      *  @custom:security non-reentrant
      */
     function setOracleAdmin() external override cygnusAdmin nonReentrant {
-        /// @custom:error AdminCantBeZero
+        /// @custom:error AdminCantBeZero Avoid settings the admin to the zero address
         if (pendingAdmin == address(0)) {
             revert ChainlinkNebulaOracle__AdminCantBeZero(pendingAdmin);
         }
