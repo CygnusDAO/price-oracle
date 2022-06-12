@@ -17,8 +17,8 @@ import "./interfaces/IErc20.sol";
  *  @author CygnusDAO
  *  @notice Oracle used by Cygnus that returns the price of 1 LP Token in DAI. In case need
  *          different implementation just update the denomination variable `dai` with another price feed
- *  @dev Implementation of fair lp token pricing using Chainlink price feeds
- *       https://blog.alphaventuredao.io/fair-lp-token-pricing/
+ *  @notice Implementation of fair lp token pricing using Chainlink price feeds
+ *          https://blog.alphaventuredao.io/fair-lp-token-pricing/
  */
 contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGuard {
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
@@ -44,7 +44,6 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      *  @custom:member underlying The address of the LP Token
      *  @custom:member priceFeedA The address of the Chainlink aggregator used for this LP Token's Token0
      *  @custom:member priceFeedB The address of the Chainlink aggregator used for this LP Token's Token1
-     *
      */
     struct ChainlinkNebula {
         bool initialized;
