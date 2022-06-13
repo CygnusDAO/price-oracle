@@ -2,18 +2,20 @@
 pragma solidity ^0.8.4;
 
 // Dependencies
-import "./interfaces/IChainlinkNebulaOracle.sol";
-import "./utils/Context.sol";
-import "./utils/ReentrancyGuard.sol";
+import { IChainlinkNebulaOracle } from "./interfaces/IChainlinkNebulaOracle.sol";
+import { Context } from "./utils/Context.sol";
+import { ReentrancyGuard } from "./utils/ReentrancyGuard.sol";
 
 // Libraries
-import "./libraries/PRBMathUD60x18.sol";
+import { PRBMath, PRBMathUD60x18 } from "./libraries/PRBMathUD60x18.sol";
 
 // Interfaces
-import "./interfaces/IErc20.sol";
+import { IErc20 } from "./interfaces/IErc20.sol";
+import { AggregatorV3Interface } from "./interfaces/AggregatorV3Interface.sol";
+import { IDexPair } from "./interfaces/IDexPair.sol";
 
 /**
- *  @title ChainlinkNebulaOracle
+ *  @title  ChainlinkNebulaOracle
  *  @author CygnusDAO
  *  @notice Oracle used by Cygnus that returns the price of 1 LP Token in DAI. In case need
  *          different implementation just update the denomination variable `dai` with another price feed
