@@ -39,8 +39,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
     /*  ────────────────────────────────────────────── Internal ───────────────────────────────────────────────  */
 
     /**
-     *  @notice returns the struct record of each oracle used by Cygnus
-     *  @custom:struct Official record of all Chainlink oracles used by Cygnus
+     *  @custom:struct ChainlinkNebula Official record of all Chainlink oracles used by Cygnus
      *  @custom:member initialized Whether an LP Token is being tracked or not
      *  @custom:member oracleId The ID of the LP Token tracked by the oracle
      *  @custom:member underlying The address of the LP Token
