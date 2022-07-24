@@ -1,22 +1,26 @@
-/** This is a description of the foo function. */
+// Deployment of oracle to get prices of assets denominated in DAI
 async function main() {
+    // Chainlink's DAI aggregator address on Avalanche
+    let daiCLinkAggregator = '0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300';
 
-  let CygnusOracle = await ethers.getContractFactory('ChainlinkNebulaOracle');
-  let cygnusOracle = await CygnusOracle.deploy('0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300');
+    // Factory
+    let CygnusOracle = await ethers.getContractFactory('ChainlinkNebulaOracle');
 
-  console.log('Oracle deployed to: ', cygnusOracle.address)
+    // Deploy oracle with DAI aggregator
+    let cygnusOracle = await CygnusOracle.deploy(daiCLinkAggregator);
 
-  console.log('Deploy transaction: ', cygnusOracle.deployTransaction.hash)
+    console.log('Oracle deployed to: ', cygnusOracle.address);
 
-  await cygnusOracle.deployed();
+    console.log('Deploy transaction: ', cygnusOracle.deployTransaction.hash);
 
-  console.log('Success')
+    await cygnusOracle.deployed();
+
+    console.log('Success');
 }
 
 main()
-  .then(() => process.exit(0))
-  .catch(error => {
-    console.error(error);
-    process.exit(1);
-  });
-
+    .then(() => process.exit(0))
+    .catch(error => {
+        console.error(error);
+        process.exit(1);
+    });
