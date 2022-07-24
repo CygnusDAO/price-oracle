@@ -251,9 +251,6 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
             revert ChainlinkNebulaOracle__PairAlreadyInitialized(lpTokenPair);
         }
 
-        // Add to list
-        allNebulas.push(lpTokenPair);
-
         // This pair's id
         uint24 pairId = nebulaSize();
 
@@ -271,6 +268,9 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
 
         // Store oracle status
         cygnusNebula.initialized = true;
+
+        // Add to list
+        allNebulas.push(lpTokenPair);
 
         /// @custom:event InitializeChainlinkNebula
         emit InitializeChainlinkNebula(true, pairId, lpTokenPair, aggregatorA, aggregatorB);
@@ -296,7 +296,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         AggregatorV3Interface priceFeedB = getNebula[lpTokenPair].priceFeedB;
 
         // Delete from array leaving a gap as to not mix up IDs
-        delete allNebulas[oracleId - 1];
+        delete allNebulas[oracleId];
 
         // Delete from object
         delete getNebula[lpTokenPair];
