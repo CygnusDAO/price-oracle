@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity >=0.8.4;
 
-/// @title IErc20
+/// @title IERC20
 /// @author Paul Razvan Berg
 /// @notice Implementation for the Erc20 standard.
 ///
@@ -19,7 +19,7 @@ pragma solidity >=0.8.4;
 ///
 /// @dev Forked from OpenZeppelin
 /// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/token/ERC20/ERC20.sol
-interface IErc20 {
+interface IERC20 {
     /// CUSTOM ERRORS ///
 
     /// @notice Emitted when the owner is the zero address.

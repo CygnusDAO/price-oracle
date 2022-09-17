@@ -15,7 +15,7 @@ chai.use(solidity);
 // Checks the price the oracle returns vs the fair LP price vs the normal lp token price
 describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
     // The denomination token the price oracle returns the price in
-    const daiAggregatorV3 = '0x51D7180edA2260cc4F6e4EebB82FEF5c3c2B8300';
+    const usdcAggregatorV3 = '0xF096872672F44d6EBA71458D74fe67F9a77a23B9';
 
     // Precision
     const rangeMin = BigInt(0.995e18);
@@ -167,7 +167,7 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
         // Oracle
         const CygnusOracle = await ethers.getContractFactory('ChainlinkNebulaOracle');
 
-        cygnusOracle = await CygnusOracle.deploy(daiAggregatorV3);
+        cygnusOracle = await CygnusOracle.deploy(usdcAggregatorV3);
 
         console.log('Nebula Oracle:', cygnusOracle.address);
     });
@@ -205,19 +205,19 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
          *
          */
         it('Checks JOE/AVAX LP fair price before initializing pair: FAIL { ChainlinkNebulaOracle__PairNotInitialized }', async () => {
-            await expect(cygnusOracle.lpTokenPriceDai(joeAvaxLP)).to.be.revertedWith(
+            await expect(cygnusOracle.lpTokenPriceUsdc(joeAvaxLP)).to.be.revertedWith(
                 ChainlinkNebulaErrors.PAIR_NOT_INITIALIZED,
             );
         });
 
         it('Checks ETH/AVAX LP fair price before initializing pair: FAIL { ChainlinkNebulaOracle__PairNotInitialized }', async () => {
-            await expect(cygnusOracle.lpTokenPriceDai(ethAvaxLP)).to.be.revertedWith(
+            await expect(cygnusOracle.lpTokenPriceUsdc(ethAvaxLP)).to.be.revertedWith(
                 ChainlinkNebulaErrors.PAIR_NOT_INITIALIZED,
             );
         });
 
         it('Checks USDc/AVAX LP fair price before initializing pair: FAIL { ChainlinkNebulaOracle__PairNotInitialized }', async () => {
-            await expect(cygnusOracle.lpTokenPriceDai(usdcAvaxLP)).to.be.revertedWith(
+            await expect(cygnusOracle.lpTokenPriceUsdc(usdcAvaxLP)).to.be.revertedWith(
                 ChainlinkNebulaErrors.PAIR_NOT_INITIALIZED,
             );
         });
@@ -349,63 +349,63 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
         });
     });
 
-    describe("Getting the LP Token's fair price (how much 1 LP Token is worth in DAI)", async () => {
+    describe("Getting the LP Token's fair price (how much 1 LP Token is worth in USDC)", async () => {
         /*
-         *  Poke oracle to get the price of 1 LP Token denominated in DAI
+         *  Poke oracle to get the price of 1 LP Token denominated in USDC
          *  First checks against the normal price formula (pa * ra + pb * rb)/totalSupply
          *  Then checks against the fair price formula used by oracle vs the fair price formula
          *  computed above. If price oracle == normal price formula && fair price formula then good
          *
          */
-        it('Gets the price from oracle for JOE/AVAX LP Token in DAI vs off-chain calculated price', async () => {
+        it('Gets the price from oracle for JOE/AVAX LP Token in USDC vs off-chain calculated price', async () => {
             await joeAvaxPx();
 
-            expect(await cygnusOracle.lpTokenPriceDai(joeAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(joeAvaxLP)).to.be.within(
                 (joeAvaxPrice * rangeMin) / oneMantissa,
                 (joeAvaxPrice * rangeMax) / oneMantissa,
             );
         });
 
-        it('Gets the price from oracle for JOE/AVAX LP Token in DAI vs off-chain calculated fair price', async () => {
+        it('Gets the price from oracle for JOE/AVAX LP Token in USDC vs off-chain calculated fair price', async () => {
             await joeAvaxPx();
 
-            expect(await cygnusOracle.lpTokenPriceDai(joeAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(joeAvaxLP)).to.be.within(
                 (joeAvaxFairPrice * rangeMin) / oneMantissa,
                 (joeAvaxFairPrice * rangeMax) / oneMantissa,
             );
         });
 
-        it('Gets the price from oracle for ETH/AVAX LP Token in DAI vs off-chain calculated price', async () => {
+        it('Gets the price from oracle for ETH/AVAX LP Token in USDC vs off-chain calculated price', async () => {
             await ethAvaxPx();
 
-            expect(await cygnusOracle.lpTokenPriceDai(ethAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(ethAvaxLP)).to.be.within(
                 (ethAvaxPrice * rangeMin) / oneMantissa,
                 (ethAvaxPrice * rangeMax) / oneMantissa,
             );
         });
 
-        it('Gets the price from oracle for ETH/AVAX LP Token in DAI vs off-chain calculated fair price', async () => {
+        it('Gets the price from oracle for ETH/AVAX LP Token in USDC vs off-chain calculated fair price', async () => {
             await ethAvaxPx();
 
-            expect(await cygnusOracle.lpTokenPriceDai(ethAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(ethAvaxLP)).to.be.within(
                 (ethAvaxFairPrice * rangeMin) / oneMantissa,
                 (ethAvaxFairPrice * rangeMax) / oneMantissa,
             );
         });
 
-        it('Gets the price from oracle for USDc/AVAX LP Token in DAI vs off-chain calculated price (18 decimals check usdc.)', async () => {
+        it('Gets the price from oracle for USDc/AVAX LP Token in USDC vs off-chain calculated price (18 decimals check usdc.)', async () => {
             await usdcAvaxPx();
 
-            expect(await cygnusOracle.lpTokenPriceDai(usdcAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(usdcAvaxLP)).to.be.within(
                 (usdcAvaxPrice * rangeMin) / oneMantissa,
                 (usdcAvaxPrice * rangeMax) / oneMantissa,
             );
         });
 
-        it('Gets the price from oracle for USDc/AVAX LP Token in DAI vs off-chain calculated fair price (18 decimals check usdc.)', async () => {
+        it('Gets the price from oracle for USDc/AVAX LP Token in USDC vs off-chain calculated fair price (18 decimals check usdc.)', async () => {
             await usdcAvaxPx();
 
-            expect(await cygnusOracle.lpTokenPriceDai(usdcAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(usdcAvaxLP)).to.be.within(
                 (usdcAvaxFairPrice * rangeMin) / oneMantissa,
                 (usdcAvaxFairPrice * rangeMax) / oneMantissa,
             );
@@ -463,7 +463,7 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
         });
 
         it('Gets the price from oracle for deleted pair: FAIL { ChainlinkNebulaOracle__PairNotInitialized } ', async () => {
-            await expect(cygnusOracle.lpTokenPriceDai(joeAvaxLP)).to.be.revertedWith(
+            await expect(cygnusOracle.lpTokenPriceUsdc(joeAvaxLP)).to.be.revertedWith(
                 ChainlinkNebulaErrors.PAIR_NOT_INITIALIZED,
             );
         });
@@ -482,19 +482,19 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
             expect(await cygnusOracle.nebulaSize()).to.be.eq(4);
         });
 
-        it('Gets the price from oracle for the new JOE/AVAX LP Token in DAI vs off-chain calculated price', async () => {
+        it('Gets the price from oracle for the new JOE/AVAX LP Token in USDC vs off-chain calculated price', async () => {
             await joeAvaxPx();
 
-            expect(await cygnusOracle.lpTokenPriceDai(joeAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(joeAvaxLP)).to.be.within(
                 (joeAvaxPrice * rangeMin) / oneMantissa,
                 (joeAvaxPrice * rangeMax) / oneMantissa,
             );
         });
 
-        it('Gets the price from oracle for the new JOE/AVAX LP Token in DAI vs off-chain calculated fair price', async () => {
+        it('Gets the price from oracle for the new JOE/AVAX LP Token in USDC vs off-chain calculated fair price', async () => {
             await joeAvaxPx();
 
-            expect(await cygnusOracle.lpTokenPriceDai(joeAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(joeAvaxLP)).to.be.within(
                 (joeAvaxFairPrice * rangeMin) / oneMantissa,
                 (joeAvaxFairPrice * rangeMax) / oneMantissa,
             );
@@ -531,7 +531,7 @@ describe('Cygnus-Chainlink: LP Fair Price Oracle', function () {
             );
 
             // Check if fair price we calculated with manipulated reserves is the same as the oracle's price
-            expect(await cygnusOracle.lpTokenPriceDai(joeAvaxLP)).to.be.within(
+            expect(await cygnusOracle.lpTokenPriceUsdc(joeAvaxLP)).to.be.within(
                 (joeAvaxFairPrice * rangeMin) / oneMantissa,
                 (joeAvaxFairPrice * rangeMax) / oneMantissa,
             );

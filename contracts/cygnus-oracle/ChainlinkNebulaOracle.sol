@@ -3,26 +3,27 @@ pragma solidity ^0.8.4;
 
 // Dependencies
 import { IChainlinkNebulaOracle } from "./interfaces/IChainlinkNebulaOracle.sol";
-import { Context } from "./utils/Context.sol";
 import { ReentrancyGuard } from "./utils/ReentrancyGuard.sol";
+import { Context } from "./utils/Context.sol";
+import { ERC20Normalizer } from "./utils/ERC20Normalizer.sol";
 
 // Libraries
 import { PRBMath, PRBMathUD60x18 } from "./libraries/PRBMathUD60x18.sol";
 
 // Interfaces
-import { IErc20 } from "./interfaces/IErc20.sol";
 import { AggregatorV3Interface } from "./interfaces/AggregatorV3Interface.sol";
 import { IDexPair } from "./interfaces/IDexPair.sol";
+import { IERC20 } from "./interfaces/IERC20.sol";
 
 /**
  *  @title  ChainlinkNebulaOracle
  *  @author CygnusDAO
- *  @notice Oracle used by Cygnus that returns the price of 1 LP Token in DAI. In case need
- *          different implementation just update the denomination variable `dai` with another price feed
+ *  @notice Oracle used by Cygnus that returns the price of 1 LP Token in USDC. In case need
+ *          different implementation just update the denomination variable `usdc` with another price feed
  *  @notice Implementation of fair lp token pricing using Chainlink price feeds
  *          https://blog.alphaventuredao.io/fair-lp-token-pricing/
  */
-contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGuard {
+contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGuard, ERC20Normalizer {
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             1. LIBRARIES
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
@@ -79,7 +80,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      */
-    uint8 public constant override decimals = 18;
+    uint8 public constant override decimals = 6;
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
@@ -89,7 +90,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      */
-    AggregatorV3Interface public immutable override dai;
+    AggregatorV3Interface public immutable override usdc;
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
@@ -107,14 +108,17 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
 
     /**
      *  @notice Constructs the Oracle
-     *  @param priceDenominator The denomination token this oracle returns the price in
+     *  @param priceDenominator The denomination token this oracle returns the prices in
      */
     constructor(AggregatorV3Interface priceDenominator) {
         // Assign admin
         admin = _msgSender();
 
         // Assign the denomination the LP Token will be priced in
-        dai = AggregatorV3Interface(priceDenominator);
+        usdc = AggregatorV3Interface(priceDenominator);
+
+        // get decimals of this aggregator - calculates only once and stores
+        computeScalar(IERC20(address(priceDenominator)));
     }
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
@@ -151,6 +155,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      *  @inheritdoc IChainlinkNebulaOracle
      */
     function nebulaSize() public view override returns (uint24) {
+        // Return how many LP Tokens we are tracking
         return uint24(allNebulas.length);
     }
 
@@ -159,18 +164,19 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      */
-    function daiPrice() external view override returns (uint256 latestPriceDai) {
-        // Chainlink price feed for the LP denomination token, in our case DAI
-        (, int256 latestDaiPrice, , , ) = dai.latestRoundData();
+    function usdcPrice() external view override returns (uint256) {
+        // Chainlink price feed for the LP denomination token, in our case USDC
+        (, int256 latestRoundUsdc, , , ) = usdc.latestRoundData();
 
-        // Adjust dai price to 18 decimals and return price
-        latestPriceDai = uint256(latestDaiPrice) * 10**(decimals - dai.decimals());
+        // Return price without adjusting decimals - not used by this contract, we keep it here to quickly checl
+        // in case something goes wrong
+        return uint256(latestRoundUsdc);
     }
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      */
-    function lpTokenPriceDai(address lpTokenPair) external view override returns (uint256 lpTokenPrice) {
+    function lpTokenPriceUsdc(address lpTokenPair) external view override returns (uint256 lpTokenPrice) {
         // Load to memory
         ChainlinkNebula memory cygnusNebula = getNebula[lpTokenPair];
 
@@ -190,12 +196,10 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         uint256 totalSupply = IDexPair(lpTokenPair).totalSupply();
 
         // Adjust reserves Token A
-        uint256 adjustedReservesA = reservesTokenA *
-            (10**(decimals - IErc20(IDexPair(lpTokenPair).token0()).decimals()));
+        uint256 adjustedReservesA = normalize(IERC20(IDexPair(lpTokenPair).token0()), reservesTokenA);
 
         // Adjust reserves Token B
-        uint256 adjustedReservesB = reservesTokenB *
-            (10**(decimals - IErc20(IDexPair(lpTokenPair).token1()).decimals()));
+        uint256 adjustedReservesB = normalize(IERC20(IDexPair(lpTokenPair).token1()), reservesTokenB);
 
         // 3. Geometric mean of reservesA and reservesB
         uint256 productReserves = adjustedReservesA.gm(adjustedReservesB);
@@ -206,26 +210,68 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         // Chainlink price feed for this lpTokens token1
         (, int256 priceB, , , ) = cygnusNebula.priceFeedB.latestRoundData();
 
-        // Chainlink price feed for denomination token, in cygnus' case DAI
-        (, int256 latestDaiPrice, , , ) = dai.latestRoundData();
-
         // Adjust price Token A to 18 decimals
-        uint256 adjustedPriceA = uint256(priceA) * 10**(decimals - cygnusNebula.priceFeedA.decimals());
+        uint256 adjustedPriceA = normalize(IERC20(address(cygnusNebula.priceFeedA)), uint256(priceA));
 
         // Adjust price Token B to 18 decimals
-        uint256 adjustedPriceB = uint256(priceB) * 10**(decimals - cygnusNebula.priceFeedB.decimals());
+        uint256 adjustedPriceB = normalize(IERC20(address(cygnusNebula.priceFeedB)), uint256(priceB));
 
-        // Adjust dai price to 18 decimals
-        uint256 adjustedDaiPrice = uint256(latestDaiPrice) * 10**(decimals - dai.decimals());
+        // Chainlink price feed for denomination token, in cygnus' case USDC
+        (, int256 latestRoundUsdc, , , ) = usdc.latestRoundData();
+
+        // Adjust USDC price to 18 decimals
+        uint256 adjustedUsdcPrice = normalize(IERC20(address(usdc)), uint256(latestRoundUsdc));
 
         // 4. Geometric mean of priceA and priceB
         uint256 productPrice = adjustedPriceA.gm(adjustedPriceB);
 
         // LP Token price denominated in USD
-        uint256 lpTokenPriceUSD = PRBMath.mulDiv(productReserves, productPrice, totalSupply) * 2;
+        uint256 lpTokenPriceUsd = PRBMath.mulDiv(productReserves, productPrice, totalSupply) * 2;
 
-        // 5. Return LP Token price denominated in DAI
-        lpTokenPrice = lpTokenPriceUSD.div(adjustedDaiPrice);
+        // 5. Return LP Token price denominated in USDC
+        lpTokenPrice = lpTokenPriceUsd.div(adjustedUsdcPrice) / 1e12;
+    }
+
+    /**
+     *  @inheritdoc IChainlinkNebulaOracle
+     */
+    function assetPricesUsdc(address lpTokenPair)
+        external
+        view
+        override
+        returns (uint256 tokenPriceA, uint256 tokenPriceB)
+    {
+        // Load to memory
+        ChainlinkNebula memory cygnusNebula = getNebula[lpTokenPair];
+
+        /// custom:error PairNotInitialized Avoid getting price unless lpTokenPair's price is being tracked
+        if (!cygnusNebula.initialized) {
+            revert ChainlinkNebulaOracle__PairNotInitialized(lpTokenPair);
+        }
+
+        // Chainlink price feed for this lpTokens token0
+        (, int256 priceA, , , ) = cygnusNebula.priceFeedA.latestRoundData();
+
+        // Chainlink price feed for this lpTokens token1
+        (, int256 priceB, , , ) = cygnusNebula.priceFeedB.latestRoundData();
+
+        // Chainlink price feed for denomination token, in cygnus' case USDC
+        (, int256 latestRoundUsdc, , , ) = usdc.latestRoundData();
+
+        // Adjust price Token A to 18 decimals
+        uint256 adjustedPriceA = normalize(IERC20(address(cygnusNebula.priceFeedA)), uint256(priceA));
+
+        // Adjust price Token B to 18 decimals
+        uint256 adjustedPriceB = normalize(IERC20(address(cygnusNebula.priceFeedB)), uint256(priceB));
+
+        // Adjust USDC price to 18 decimals
+        uint256 adjustedUsdcPrice = normalize(IERC20(address(usdc)), uint256(latestRoundUsdc));
+
+        // Return token0's price in USDC
+        tokenPriceA = adjustedPriceA.div(adjustedUsdcPrice) / 1e12;
+
+        // Return token1's price in USDC
+        tokenPriceB = adjustedPriceB.div(adjustedUsdcPrice) / 1e12;
     }
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
@@ -242,7 +288,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         address lpTokenPair,
         AggregatorV3Interface aggregatorA,
         AggregatorV3Interface aggregatorB
-    ) external override cygnusAdmin nonReentrant {
+    ) external override nonReentrant cygnusAdmin {
         // Load to storage
         ChainlinkNebula storage cygnusNebula = getNebula[lpTokenPair];
 
@@ -251,11 +297,8 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
             revert ChainlinkNebulaOracle__PairAlreadyInitialized(lpTokenPair);
         }
 
-        // This pair's id
-        uint24 pairId = nebulaSize();
-
         // Assign id
-        cygnusNebula.oracleId = pairId;
+        cygnusNebula.oracleId = nebulaSize();
 
         // Store LP Token address
         cygnusNebula.underlying = lpTokenPair;
@@ -269,18 +312,32 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         // Store oracle status
         cygnusNebula.initialized = true;
 
+        // Compute scalars for the LP Token and for Chainlink oracle aggregators
+
+        // token0 scalar
+        computeScalar(IERC20(IDexPair(lpTokenPair).token0()));
+
+        // token1 scalar
+        computeScalar(IERC20(IDexPair(lpTokenPair).token1()));
+
+        // AggregatorA scalar
+        computeScalar(IERC20(address(aggregatorA)));
+
+        // AggregatorB scalar
+        computeScalar(IERC20(address(aggregatorB)));
+
         // Add to list
         allNebulas.push(lpTokenPair);
 
         /// @custom:event InitializeChainlinkNebula
-        emit InitializeChainlinkNebula(true, pairId, lpTokenPair, aggregatorA, aggregatorB);
+        emit InitializeChainlinkNebula(true, cygnusNebula.oracleId, lpTokenPair, aggregatorA, aggregatorB);
     }
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      *  @custom:security non-reentrant
      */
-    function deleteNebula(address lpTokenPair) external override cygnusAdmin nonReentrant {
+    function deleteNebula(address lpTokenPair) external override nonReentrant cygnusAdmin {
         /// @custom:error PairNotinitialized Avoid delete if not initialized
         if (!getNebula[lpTokenPair].initialized) {
             revert ChainlinkNebulaOracle__PairNotInitialized(lpTokenPair);
@@ -295,7 +352,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         // Get the second price feed for this oracle
         AggregatorV3Interface priceFeedB = getNebula[lpTokenPair].priceFeedB;
 
-        // Delete from array leaving a gap as to not mix up IDs
+        // Delete from array and leave a gap as to not mix up IDs
         delete allNebulas[oracleId];
 
         // Delete from object
@@ -309,25 +366,25 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
      *  @inheritdoc IChainlinkNebulaOracle
      *  @custom:security non-reentrant
      */
-    function setOraclePendingAdmin(address newOracleAdmin) external override cygnusAdmin nonReentrant {
+    function setOraclePendingAdmin(address newPendingAdmin) external override nonReentrant cygnusAdmin {
         // Pending admin initial is always zero
         /// @custom:error PendingAdminAlreadySet Avoid setting the same pending admin twice
-        if (newOracleAdmin == pendingAdmin) {
-            revert ChainlinkNebulaOracle__PendingAdminAlreadySet(newOracleAdmin);
+        if (newPendingAdmin == pendingAdmin) {
+            revert ChainlinkNebulaOracle__PendingAdminAlreadySet(newPendingAdmin);
         }
 
         // Assign address of the requested admin
-        pendingAdmin = newOracleAdmin;
+        pendingAdmin = newPendingAdmin;
 
         /// @custom:event NewOraclePendingAdmin
-        emit NewOraclePendingAdmin(admin, newOracleAdmin);
+        emit NewOraclePendingAdmin(admin, newPendingAdmin);
     }
 
     /**
      *  @inheritdoc IChainlinkNebulaOracle
      *  @custom:security non-reentrant
      */
-    function setOracleAdmin() external override cygnusAdmin nonReentrant {
+    function setOracleAdmin() external override nonReentrant cygnusAdmin {
         /// @custom:error AdminCantBeZero Avoid settings the admin to the zero address
         if (pendingAdmin == address(0)) {
             revert ChainlinkNebulaOracle__AdminCantBeZero(pendingAdmin);
