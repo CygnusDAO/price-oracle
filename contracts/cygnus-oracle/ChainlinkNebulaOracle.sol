@@ -229,7 +229,7 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         uint256 lpTokenPriceUsd = PRBMath.mulDiv(productReserves, productPrice, totalSupply) * 2;
 
         // 5. Return LP Token price denominated in USDC
-        lpTokenPrice = lpTokenPriceUsd.div(adjustedUsdcPrice) / 1e12;
+        lpTokenPrice = lpTokenPriceUsd.div(adjustedUsdcPrice);
     }
 
     /**
@@ -268,10 +268,10 @@ contract ChainlinkNebulaOracle is IChainlinkNebulaOracle, Context, ReentrancyGua
         uint256 adjustedUsdcPrice = normalize(IERC20(address(usdc)), uint256(latestRoundUsdc));
 
         // Return token0's price in USDC
-        tokenPriceA = adjustedPriceA.div(adjustedUsdcPrice) / 1e12;
+        tokenPriceA = adjustedPriceA.div(adjustedUsdcPrice);
 
         // Return token1's price in USDC
-        tokenPriceB = adjustedPriceB.div(adjustedUsdcPrice) / 1e12;
+        tokenPriceB = adjustedPriceB.div(adjustedUsdcPrice);
     }
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
