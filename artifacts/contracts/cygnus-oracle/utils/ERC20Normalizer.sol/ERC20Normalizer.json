@@ -1,0 +1,38 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "ERC20Normalizer",
+  "sourceName": "contracts/cygnus-oracle/utils/ERC20Normalizer.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "decimals",
+          "type": "uint256"
+        }
+      ],
+      "name": "IERC20Normalizer__TokenDecimalsGreaterThan18",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "IERC20Normalizer__TokenDecimalsZero",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

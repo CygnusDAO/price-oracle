@@ -3,6 +3,3 @@ node_modules
 
 # Dotenv
 .env
-
-# Hardhat
-artifacts
