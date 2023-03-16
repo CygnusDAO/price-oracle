@@ -47,4 +47,6 @@ interface IDexPair {
     function price0CumulativeLast() external view returns (uint256);
 
     function price1CumulativeLast() external view returns (uint256);
+
+    function getUnderlyingBalances() external view returns (uint256 amount0Current, uint256 amount1Current);
 }

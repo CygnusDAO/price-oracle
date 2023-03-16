@@ -8,7 +8,7 @@ import "../interfaces/IERC20.sol";
  *         https://github.com/paulrberg/prb-contracts/blob/main/src/token/erc20/ERC20Normalizer.sol
  *         The edit comes from the fact that we want to keep the normalize function as a view function,
  *         We removed the `computeScalar` function inside the `normalize` function and instead we just
- *         compute the scalar only once when we add the LP Tokens
+ *         compute the scalar only once when we add the LP Tokens saving gas fees
  */
 
 /// @title ERC20Normalizer

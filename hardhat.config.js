@@ -1,44 +1,58 @@
-// Hardhat
-require('solidity-coverage');
-require('hardhat-contract-sizer');
-require('@nomiclabs/hardhat-waffle');
+require("@nomicfoundation/hardhat-toolbox")
+require("hardhat-contract-sizer")
 
-// JS
-const path = require('path')
-require('dotenv').config({ path: path.resolve(__dirname, './.env') });
-const { PRIVATE_KEY } = process.env;
-
+/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
     solidity: {
-        version: '0.8.4',
+        version: "0.8.4",
         settings: {
             optimizer: {
                 enabled: true,
-                runs: 800,
+                runs: 1,
             },
         },
     },
-    gasReporter: {
-        enabled: process.env.REPORT_GAS ? false : true,
-    },
+    defaultNetwork: "localhost",
     networks: {
-        avalancheFujiTestnet: {
-            url: 'https://api.avax-test.network/ext/bc/C/rpc',
-            chainId: 43113,
-            accounts: [`0x${process.env.PRIVATE_KEY}`],
-            forking: {
-                url: 'https://api.avax-test.network/ext/bc/C/rpc',
-                enabled: true,
-            },
+        // Local
+        localhost: {
+            url: "http://localhost:8545",
+            chainId: 31337,
+            timeout: 400000000,
         },
-        avalancheMain: {
-            url: 'https://api.avax.network/ext/bc/C/rpc',
+        // Mainnet
+        mainnet: {
+            url: "https://rpc.ankr.com/eth",
+            chainId: 1,
+        },
+        // Arbitrum
+        arbitrum: {
+            url: "https://rpc.ankr.com/arbitrum",
+            chainId: 42161,
+        },
+        // Avalanche
+        avalanche: {
+            url: "https://rpc.ankr.com/avalanche",
             chainId: 43114,
-            accounts: [`0x${process.env.PRIVATE_KEY}`],
-            forking: {
-                url: 'https://api.avax.network/ext/bc/C/rpc',
-                enabled: true,
-            },
+        },
+        // Fantom
+        fantom: {
+            url: "https://rpc.ankr.com/fantom",
+            chainId: 250,
+        },
+        // Polygon
+        polygon: {
+            url: "https://rpc.ankr.com/polygon",
+            chainId: 137,
+        },
+        // Optimism
+        optimism: {
+            url: "https://opt-mainnet.g.alchemy.com/v2/mk0t_MMXVRcflkZQ4wKGjy4l2nmgHevW",
+            chainId: 10,
+        },
+        bsc: {
+            url: "https://rpc.ankr.com/bsc",
+            chainId: 56,
         },
     },
-};
+}
