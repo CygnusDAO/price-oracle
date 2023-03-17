@@ -1,6 +1,6 @@
-# Cygnus-Chainlink LP Oracle
+# Cygnus LP Oracle
 
-A fair reserves LP Oracle using Chainlink price feeds.
+A fair reserves LP Oracle for UniswapV2-style AMMs using Chainlink price feeds.
 
 It returns the price of 1 LP Token denominated in USDC.
 
