@@ -440,41 +440,6 @@
       "artifacts": [
         "FixedPointMathLib"
       ]
-    },
-    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/libraries/UQ112x112.sol": {
-      "lastModificationDate": 1680887211997,
-      "contentHash": "789258ea6049f07dd974cbce5e5cff3b",
-      "sourceName": "contracts/cygnus-oracle/libraries/UQ112x112.sol",
-      "solcConfig": {
-        "version": "0.8.4",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 1
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.8.4"
-      ],
-      "artifacts": [
-        "UQ112x112"
-      ]
     }
   }
 }
