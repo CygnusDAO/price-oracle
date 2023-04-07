@@ -41,29 +41,11 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, Context, ReentrancyGuard, ER
     /*  ────────────────────────────────────────────── Internal ───────────────────────────────────────────────  */
 
     /**
-     *  @custom:struct CygnusNebula Official record of all Chainlink oracles used by Cygnus
-     *  @custom:member initialized Whether an LP Token is being tracked or not
-     *  @custom:member oracleId The ID of the LP Token tracked by the oracle
-     *  @custom:member underlying The address of the LP Token
-     *  @custom:member priceFeedA The address of the Chainlink aggregator used for this LP Token's Token0
-     *  @custom:member priceFeedB The address of the Chainlink aggregator used for this LP Token's Token1
+     *  @notice Internal record of all initialized oracles
      */
-    struct CygnusNebula {
-        bool initialized;
-        uint88 oracleId;
-        address underlying;
-        IERC20 token0;
-        IERC20 token1;
-        AggregatorV3Interface priceFeedA;
-        AggregatorV3Interface priceFeedB;
-    }
+    mapping(address => CygnusNebula) internal nebulas;
 
     /*  ─────────────────────────────────────────────── Public ────────────────────────────────────────────────  */
-
-    /**
-     *  @inheritdoc ICygnusNebulaOracle
-     */
-    mapping(address => CygnusNebula) public override getNebula;
 
     /**
      *  @inheritdoc ICygnusNebulaOracle
@@ -73,7 +55,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, Context, ReentrancyGuard, ER
     /**
      *  @inheritdoc ICygnusNebulaOracle
      */
-    string public constant override name = "Cygnus-Nebula: Chainlink LP Oracle";
+    string public constant override name = "Cygnus-Nebula: Constant-Product LP Oracle";
 
     /**
      *  @inheritdoc ICygnusNebulaOracle
@@ -184,24 +166,24 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, Context, ReentrancyGuard, ER
     /**
      *  @inheritdoc ICygnusNebulaOracle
      */
-    function getAnnualizedLogApr(
+    function getAnnualizedBaseRate(
         uint256 exchangeRateLast,
-        uint256 exchangeRateNow,
+        uint256 exchangeRateCurrent,
         uint256 timeElapsed
     ) public pure override returns (uint256) {
         // Get the natural logarithm of last exchange rate
-        uint256 logRateYesterday = exchangeRateLast.ln();
+        uint256 logRateLast = exchangeRateLast.ln();
 
         // Get the natural logarithm of current exchange rate
-        uint256 logRateToday = exchangeRateNow.ln();
+        uint256 logRateCurrent = exchangeRateCurrent.ln();
 
-        // Get the log rate difference
-        uint256 logRateDiff = logRateToday - logRateYesterday;
+        // Get the log rate difference between the exchange rates
+        uint256 logRateDiff = logRateCurrent - logRateLast;
 
         // The log APR is = (lorRateDif * 1 year) / time since last update
         uint256 logAprInYear = (logRateDiff * SECONDS_PER_YEAR) / timeElapsed;
 
-        // Get the natural exponent of the log APR
+        // Get the natural exponent of the log APR and substract 1
         uint256 annualizedApr = logAprInYear.exp() - 1e18;
 
         // Returns the annualized APR, taking into account time since last update
@@ -225,55 +207,62 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, Context, ReentrancyGuard, ER
     /**
      *  @inheritdoc ICygnusNebulaOracle
      */
+    function getNebula(address lpTokenPair) external view override returns (CygnusNebula memory) {
+        return nebulas[lpTokenPair];
+    }
+
+    /**
+     *  @inheritdoc ICygnusNebulaOracle
+     */
     function lpTokenPriceUsd(address lpTokenPair) external view override returns (uint256 lpTokenPrice) {
         // Load to memory
-        CygnusNebula memory cygnusNebula = getNebula[lpTokenPair];
+        CygnusNebula memory cygnusNebula = nebulas[lpTokenPair];
 
         /// custom:error PairNotInitialized Avoid getting price unless lpTokenPair's price is being tracked
         if (!cygnusNebula.initialized) {
             revert CygnusNebulaOracle__PairNotInitialized(lpTokenPair);
         }
 
-        // 1. Get reserves of Token A and Token B to compute k
+        // 1. Get reserves of tokenA and tokenB to compute k
         (uint112 reservesTokenA, uint112 reservesTokenB /* Timestamp */, ) = IDexPair(lpTokenPair).getReserves();
 
-        // 2. Get total supply of the underlying LP Token
-        uint256 totalSupply = IDexPair(lpTokenPair).totalSupply();
+        // Adjust reserves tokenA with cached scalar
+        uint256 adjustedReservesA = normalize(cygnusNebula.poolTokens[0], reservesTokenA);
 
-        // Adjust reserves Token A with cached scalar
-        uint256 adjustedReservesA = normalize(cygnusNebula.token0, reservesTokenA);
+        // Adjust reserves tokenB with cached scalar
+        uint256 adjustedReservesB = normalize(cygnusNebula.poolTokens[1], reservesTokenB);
 
-        // Adjust reserves Token B with cached scalar
-        uint256 adjustedReservesB = normalize(cygnusNebula.token1, reservesTokenB);
-
-        // 3. Geometric mean of reservesA and reservesB
+        // Geometric mean of reservesA and reservesB
         uint256 productReserves = adjustedReservesA.gm(adjustedReservesB);
 
-        // Chainlink price feed for this lpTokens token0
-        (, int256 priceA, , , ) = cygnusNebula.priceFeedA.latestRoundData();
+        // 2. Get prices of tokenA and tokenB from Chainlink; token0 price
+        (, int256 priceA, , , ) = cygnusNebula.priceFeeds[0].latestRoundData();
 
-        // Chainlink price feed for this lpTokens token1
-        (, int256 priceB, , , ) = cygnusNebula.priceFeedB.latestRoundData();
+        // token1 price
+        (, int256 priceB, , , ) = cygnusNebula.priceFeeds[1].latestRoundData();
 
-        // Adjust price Token A to 18 decimals
-        uint256 adjustedPriceA = normalize(IERC20(address(cygnusNebula.priceFeedA)), uint256(priceA));
+        // Adjust price of tokenA to 18 decimals
+        uint256 adjustedPriceA = normalize(IERC20(address(cygnusNebula.priceFeeds[0])), uint256(priceA));
 
-        // Adjust price Token B to 18 decimals
-        uint256 adjustedPriceB = normalize(IERC20(address(cygnusNebula.priceFeedB)), uint256(priceB));
+        // Adjust price of tokenB to 18 decimals
+        uint256 adjustedPriceB = normalize(IERC20(address(cygnusNebula.priceFeeds[1])), uint256(priceB));
 
-        // Chainlink price feed for denomination token
+        // Geometric mean of priceA and priceB
+        uint256 productPrice = adjustedPriceA.gm(adjustedPriceB);
+
+        // 3. Get the price of denomination token
         (, int256 latestRoundUsd, , , ) = denominationAggregator.latestRoundData();
 
-        // Adjust price to 18 decimals
+        // Adjust price of denom token to 18 decimals
         uint256 adjustedUsdPrice = normalize(IERC20(address(denominationAggregator)), uint256(latestRoundUsd));
 
-        // 4. Geometric mean of priceA and priceB
-        uint256 productPrice = adjustedPriceA.gm(adjustedPriceB);
+        // 4. Get total supply of the underlying LP Token
+        uint256 totalSupply = IDexPair(lpTokenPair).totalSupply();
 
         // LP Token price denominated in USD
         uint256 lpPrice = PRBMath.mulDiv(productReserves, productPrice, totalSupply) * 2;
 
-        // 5. Return LP Token price denominated in denomination token
+        // 5. Return LP Token price expressed in denomination token
         lpTokenPrice = lpPrice.div(adjustedUsdPrice) / (10 ** (18 - decimals));
     }
 
@@ -284,7 +273,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, Context, ReentrancyGuard, ER
         address lpTokenPair
     ) external view override returns (uint256 tokenPriceA, uint256 tokenPriceB) {
         // Load to memory
-        CygnusNebula memory cygnusNebula = getNebula[lpTokenPair];
+        CygnusNebula memory cygnusNebula = nebulas[lpTokenPair];
 
         /// custom:error PairNotInitialized Avoid getting price unless lpTokenPair's price is being tracked
         if (!cygnusNebula.initialized) {
@@ -292,19 +281,19 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, Context, ReentrancyGuard, ER
         }
 
         // Chainlink price feed for this lpTokens token0
-        (, int256 priceA, , , ) = cygnusNebula.priceFeedA.latestRoundData();
+        (, int256 priceA, , , ) = cygnusNebula.priceFeeds[0].latestRoundData();
 
         // Chainlink price feed for this lpTokens token1
-        (, int256 priceB, , , ) = cygnusNebula.priceFeedB.latestRoundData();
+        (, int256 priceB, , , ) = cygnusNebula.priceFeeds[1].latestRoundData();
+
+        // Adjust price Token A to 18 decimals
+        uint256 adjustedPriceA = normalize(IERC20(address(cygnusNebula.priceFeeds[0])), uint256(priceA));
+
+        // Adjust price Token B to 18 decimals
+        uint256 adjustedPriceB = normalize(IERC20(address(cygnusNebula.priceFeeds[1])), uint256(priceB));
 
         // Chainlink price feed for denomination token
         (, int256 latestRoundUsd, , , ) = denominationAggregator.latestRoundData();
-
-        // Adjust price Token A to 18 decimals
-        uint256 adjustedPriceA = normalize(IERC20(address(cygnusNebula.priceFeedA)), uint256(priceA));
-
-        // Adjust price Token B to 18 decimals
-        uint256 adjustedPriceB = normalize(IERC20(address(cygnusNebula.priceFeedB)), uint256(priceB));
 
         // Adjust price to 18 decimals
         uint256 adjustedUsdPrice = normalize(IERC20(address(denominationAggregator)), uint256(latestRoundUsd));
@@ -328,16 +317,36 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, Context, ReentrancyGuard, ER
      */
     function initializeNebula(
         address lpTokenPair,
-        AggregatorV3Interface aggregatorA,
-        AggregatorV3Interface aggregatorB
+        AggregatorV3Interface[] calldata aggregators
     ) external override nonReentrant cygnusAdmin {
         // Load to storage
-        CygnusNebula storage cygnusNebula = getNebula[lpTokenPair];
+        CygnusNebula storage cygnusNebula = nebulas[lpTokenPair];
 
         /// @custom:error PairIsinitialized Avoid duplicate oracle
         if (cygnusNebula.initialized) {
             revert CygnusNebulaOracle__PairAlreadyInitialized(lpTokenPair);
         }
+
+        // Create memory array of tokens with pool tokens length
+        IERC20[] memory poolTokens = new IERC20[](aggregators.length);
+
+        // Token0 from the LP
+        poolTokens[0] = IERC20(IDexPair(lpTokenPair).token0());
+
+        // Token1 from the LP
+        poolTokens[1] = IERC20(IDexPair(lpTokenPair).token1());
+
+        // Token0 cache scalar
+        computeScalar(poolTokens[0]);
+
+        // Token1 cache scalar
+        computeScalar(poolTokens[1]);
+
+        // AggregatorA cache scalar
+        computeScalar(IERC20(address(aggregators[0])));
+
+        // AggregatorB cache scalar
+        computeScalar(IERC20(address(aggregators[1])));
 
         // Assign id
         cygnusNebula.oracleId = nebulaSize();
@@ -345,40 +354,20 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, Context, ReentrancyGuard, ER
         // Store LP Token address
         cygnusNebula.underlying = lpTokenPair;
 
-        // Cache scalars for the LP Token
-        // Token0
-        cygnusNebula.token0 = IERC20(IDexPair(lpTokenPair).token0());
+        // Tokens addresses
+        cygnusNebula.poolTokens = poolTokens;
 
-        // Token0
-        cygnusNebula.token1 = IERC20(IDexPair(lpTokenPair).token1());
-
-        // token0 scalar
-        computeScalar(cygnusNebula.token0);
-
-        // token1 scalar
-        computeScalar(cygnusNebula.token1);
-
-        // Cache scalars for Chainlink oracle aggregators
-        // Store the chainlink's aggregator contract address for this LP Token's token0
-        cygnusNebula.priceFeedA = aggregatorA;
-
-        // Store the chainlink's aggregator contract address for this LP Token's token1
-        cygnusNebula.priceFeedB = aggregatorB;
-
-        // AggregatorA scalar
-        computeScalar(IERC20(address(aggregatorA)));
-
-        // AggregatorB scalar
-        computeScalar(IERC20(address(aggregatorB)));
-
-        // Add to list
-        allNebulas.push(lpTokenPair);
+        // Tokens prices
+        cygnusNebula.priceFeeds = aggregators;
 
         // Store oracle status
         cygnusNebula.initialized = true;
 
+        // Add to list
+        allNebulas.push(lpTokenPair);
+
         /// @custom:event InitializeCygnusNebula
-        emit InitializeCygnusNebula(true, cygnusNebula.oracleId, lpTokenPair, aggregatorA, aggregatorB);
+        emit InitializeCygnusNebula(true, cygnusNebula.oracleId, lpTokenPair, poolTokens, aggregators);
     }
 
     /**

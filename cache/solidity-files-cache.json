@@ -1,0 +1,480 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/CygnusNebulaOracle.sol": {
+      "lastModificationDate": 1680887211993,
+      "contentHash": "eab57b14d6c68e2a0a75360c16ff91e3",
+      "sourceName": "contracts/cygnus-oracle/CygnusNebulaOracle.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./interfaces/ICygnusNebulaOracle.sol",
+        "./utils/Context.sol",
+        "./utils/ReentrancyGuard.sol",
+        "./utils/ERC20Normalizer.sol",
+        "./libraries/PRBMathUD60x18.sol",
+        "./interfaces/IERC20.sol",
+        "./interfaces/IDexPair.sol",
+        "./interfaces/AggregatorV3Interface.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.4"
+      ],
+      "artifacts": [
+        "CygnusNebulaOracle"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/interfaces/ICygnusNebulaOracle.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "0b6116749e25ad56e5420bd71eef15cb",
+      "sourceName": "contracts/cygnus-oracle/interfaces/ICygnusNebulaOracle.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./AggregatorV3Interface.sol",
+        "./IDexPair.sol",
+        "./IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.4"
+      ],
+      "artifacts": [
+        "ICygnusNebulaOracle"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/utils/Context.sol": {
+      "lastModificationDate": 1680887212001,
+      "contentHash": "714ffed9ce6aa4792dc5baefb2b5e0e8",
+      "sourceName": "contracts/cygnus-oracle/utils/Context.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "Context"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/utils/ReentrancyGuard.sol": {
+      "lastModificationDate": 1680887212001,
+      "contentHash": "8913b6f9416fda7395529ce2ba29beec",
+      "sourceName": "contracts/cygnus-oracle/utils/ReentrancyGuard.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "ReentrancyGuard"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/utils/ERC20Normalizer.sol": {
+      "lastModificationDate": 1680887212001,
+      "contentHash": "92de04d9b624aba07fd0750eae7d968a",
+      "sourceName": "contracts/cygnus-oracle/utils/ERC20Normalizer.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../interfaces/IERC20.sol"
+      ],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "ERC20Normalizer"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/libraries/PRBMathUD60x18.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "ea06e5964d6db368921b74c21e01999b",
+      "sourceName": "contracts/cygnus-oracle/libraries/PRBMathUD60x18.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./PRBMath.sol"
+      ],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "PRBMathUD60x18"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/interfaces/IERC20.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "f4e098025f48fefa5d04c072db123297",
+      "sourceName": "contracts/cygnus-oracle/interfaces/IERC20.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "IERC20"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/interfaces/IDexPair.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "f9a9b27f3861b648dceb55703d58bbf0",
+      "sourceName": "contracts/cygnus-oracle/interfaces/IDexPair.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "IDexPair"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/interfaces/AggregatorV3Interface.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "7f7e2da7ab0257d959a1f655c615ec09",
+      "sourceName": "contracts/cygnus-oracle/interfaces/AggregatorV3Interface.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.4"
+      ],
+      "artifacts": [
+        "AggregatorV3Interface"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/libraries/PRBMath.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "dfcfc37ace442ee0a3a95f365f27c81b",
+      "sourceName": "contracts/cygnus-oracle/libraries/PRBMath.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "PRBMath"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/interfaces/IUniswapV3NebulaOracle.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "9dd5529da6f23f99322547d62304cfd7",
+      "sourceName": "contracts/cygnus-oracle/interfaces/IUniswapV3NebulaOracle.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./AggregatorV3Interface.sol",
+        "./IDexPair.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.4"
+      ],
+      "artifacts": [
+        "IUniswapV3NebulaOracle"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/libraries/FixedPointMathLib.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "2a653f5beaeb0fe366a4d90b565e8886",
+      "sourceName": "contracts/cygnus-oracle/libraries/FixedPointMathLib.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.4"
+      ],
+      "artifacts": [
+        "FixedPointMathLib"
+      ]
+    },
+    "/home/sorrowlol/price-oracle/contracts/cygnus-oracle/libraries/UQ112x112.sol": {
+      "lastModificationDate": 1680887211997,
+      "contentHash": "789258ea6049f07dd974cbce5e5cff3b",
+      "sourceName": "contracts/cygnus-oracle/libraries/UQ112x112.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 1
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.8.4"
+      ],
+      "artifacts": [
+        "UQ112x112"
+      ]
+    }
+  }
+}

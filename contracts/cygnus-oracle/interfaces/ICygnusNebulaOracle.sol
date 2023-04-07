@@ -56,16 +56,14 @@ interface ICygnusNebulaOracle {
      *  @param initialized Whether or not the LP Token is initialized
      *  @param oracleId The ID for this oracle
      *  @param lpTokenPair The address of the LP Token
-     *  @param priceFeedA The address of the Chainlink's aggregator contract for this LP Token's token0
-     *  @param priceFeedB The address of the Chainlink's aggregator contract for this LP Token's token1
      *  @custom:event InitializeCygnusNebula Logs when an LP Token pair's price starts being tracked
      */
     event InitializeCygnusNebula(
         bool initialized,
         uint88 oracleId,
         address lpTokenPair,
-        AggregatorV3Interface priceFeedA,
-        AggregatorV3Interface priceFeedB
+        IERC20[] poolTokens,
+        AggregatorV3Interface[] priceFeeds
     );
 
     /**
@@ -86,7 +84,7 @@ interface ICygnusNebulaOracle {
             3. CONSTANT FUNCTIONS
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
 
-    /*  ─────────────────────────────────────────────── Public ────────────────────────────────────────────────  */
+    /*  ────────────────────────────────────────────── Internal ───────────────────────────────────────────────  */
 
     /**
      *  @notice Returns the struct record of each oracle used by Cygnus
@@ -94,25 +92,31 @@ interface ICygnusNebulaOracle {
      *  @return initialized Whether an LP Token is being tracked or not
      *  @return oracleId The ID of the LP Token tracked by the oracle
      *  @return underlying The address of the LP Token
-     *  @return token0 Address of token0 from the LP
-     *  @return token1 Address of token1 from the LP
-     *  @return priceFeedA The address of the Chainlink aggregator used for this LP Token's Token0
-     *  @return priceFeedB The address of the Chainlink aggregator used for this LP Token's Token1
+     *  @return poolId The bytes32 of the poolId from the balancer vault
+     *  @return poolTokens Array of all the pool tokens
+     *  @return priceFeeds The address of hte price feeds
+     */
+    struct CygnusNebula {
+        bool initialized;
+        uint88 oracleId;
+        address underlying;
+        bytes32 poolId;
+        IERC20[] poolTokens;
+        AggregatorV3Interface[] priceFeeds;
+    }
+
+    /*  ─────────────────────────────────────────────── Public ────────────────────────────────────────────────  */
+
+    /**
+     *  @notice Returns the struct record of each oracle used by Cygnus
+     *  @param lpTokenPair The address of the LP Token
      */
     function getNebula(
         address lpTokenPair
     )
         external
         view
-        returns (
-            bool initialized,
-            uint88 oracleId,
-            address underlying,
-            IERC20 token0,
-            IERC20 token1,
-            AggregatorV3Interface priceFeedA,
-            AggregatorV3Interface priceFeedB
-        );
+        returns (CygnusNebula memory);
 
     /**
      *  @notice Gets the address of the LP Token that (if) is being tracked by this oracle
@@ -196,13 +200,15 @@ interface ICygnusNebulaOracle {
     function assetPricesUsd(address lpTokenPair) external view returns (uint256 tokenPriceA, uint256 tokenPriceB);
 
     /**
-     *  @notice Get the annualized log APR given 2 exchange rates and the time elapsed between them
+     *  @notice Get the APR given 2 exchange rates and the time elapsed between them. This is helpful for tokens
+     *          that meet x*y=k such as UniswapV2 since exchange rates should never decrease (else LPs lose cash).
+     *          Uses the natural log to avoid overflowing when we annualize the log difference.
      *  @param exchangeRateLast The previous exchange rate
      *  @param exchangeRateNow The current exchange rate
      *  @param timeElapsed Time elapsed between the exchange rates
-     *  @return apr The estimated APR
+     *  @return apr The estimated base rate (APR excluding any token rewards)
      */
-    function getAnnualizedLogApr(
+    function getAnnualizedBaseRate(
         uint256 exchangeRateLast,
         uint256 exchangeRateNow,
         uint256 timeElapsed
@@ -217,14 +223,12 @@ interface ICygnusNebulaOracle {
     /**
      *  @notice Initialize an LP Token pair, only admin
      *  @param lpTokenPair The contract address of the LP Token
-     *  @param priceFeedA The contract address of the Chainlink's aggregator contract for this LP Token's token0
-     *  @param priceFeedB The contract address of the Chainlink's aggregator contract for this LP Token's token1
+     *  @param aggregators Array of Chainlink aggregators for this LP token's tokens
      *  @custom:security non-reentrant
      */
     function initializeNebula(
         address lpTokenPair,
-        AggregatorV3Interface priceFeedA,
-        AggregatorV3Interface priceFeedB
+        AggregatorV3Interface[] calldata aggregators
     ) external;
 
     /**
