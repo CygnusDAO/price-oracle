@@ -60,11 +60,6 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     /**
      *  @inheritdoc ICygnusNebulaOracle
      */
-    string public constant override symbol = "CygNebula";
-
-    /**
-     *  @inheritdoc ICygnusNebulaOracle
-     */
     string public constant override version = "1.0.0";
 
     /**
@@ -76,6 +71,11 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
      *  @inheritdoc ICygnusNebulaOracle
      */
     uint256 public constant override AGGREGATOR_DECIMALS = 8;
+
+    /**
+     *  @inheritdoc ICygnusNebulaOracle
+     */
+    uint256 public constant AGGREGATOR_SCALAR = 10 ** (18 - 8); // 10^(18 - AGGREGATOR_DECIMALS)
 
     /**
      *  @inheritdoc ICygnusNebulaOracle
@@ -153,7 +153,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     function isCygnusAdmin() internal view {
         /// @custom:error MsgSenderNotAdmin Avoid unless caller is Cygnus Admin
         if (msg.sender != admin) {
-            revert CygnusNebulaOracle__MsgSenderNotAdmin({ sender: msg.sender });
+            revert CygnusNebulaOracle__MsgSenderNotAdmin({sender: msg.sender});
         }
     }
 
@@ -172,13 +172,13 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
                 mul(
                     mload(0x20),
                     and(
-                        // The arguments are evaluated from right to left.
-                        gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+                        // The arguments are evaluated from right to left
+                        gt(returndatasize(), 0x1f), // At least 32 bytes returned
                         staticcall(gas(), priceFeed, 0x1c, 0x4, 0x0, 0x40) // Only get `latestPrice`
                     )
                 ),
                 // Adjust to 18 decimals
-                exp(10, sub(18, AGGREGATOR_DECIMALS))
+                AGGREGATOR_SCALAR
             )
         }
     }
@@ -249,7 +249,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
 
         /// @custom:error PairNotInitialized Avoid getting price unless lpTokenPair's price is being tracked
         if (!cygnusNebula.initialized) {
-            revert CygnusNebulaOracle__PairNotInitialized({ lpTokenPair: lpTokenPair });
+            revert CygnusNebulaOracle__PairNotInitialized({lpTokenPair: lpTokenPair});
         }
 
         // 1. Get price of each of the LP token assets adjusted to 18 decimals
@@ -291,7 +291,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
 
         /// @custom:error PairNotInitialized Avoid getting price unless lpTokenPair's price is being tracked
         if (!cygnusNebula.initialized) {
-            revert CygnusNebulaOracle__PairNotInitialized({ lpTokenPair: lpTokenPair });
+            revert CygnusNebulaOracle__PairNotInitialized({lpTokenPair: lpTokenPair});
         }
 
         // Price of denom token
@@ -332,7 +332,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
 
         // If the LP Token pair is already being tracked by an oracle, revert with an error message
         if (cygnusNebula.initialized) {
-            revert CygnusNebulaOracle__PairAlreadyInitialized({ lpTokenPair: lpTokenPair });
+            revert CygnusNebulaOracle__PairAlreadyInitialized({lpTokenPair: lpTokenPair});
         }
 
         // Create a memory array of tokens with the same length as the number of price aggregators
@@ -387,15 +387,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
         allNebulas.push(lpTokenPair);
 
         /// @custom:event InitializeCygnusNebula
-        emit InitializeCygnusNebula(
-            true,
-            cygnusNebula.oracleId,
-            lpTokenPair,
-            poolTokens,
-            tokenDecimals,
-            aggregators,
-            priceDecimals
-        );
+        emit InitializeCygnusNebula(true, cygnusNebula.oracleId, lpTokenPair, poolTokens, tokenDecimals, aggregators, priceDecimals);
     }
 
     /**
@@ -406,7 +398,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
         // Pending admin initial is always zero
         /// @custom:error PendingAdminAlreadySet Avoid setting the same pending admin twice
         if (newPendingAdmin == pendingAdmin) {
-            revert CygnusNebulaOracle__PendingAdminAlreadySet({ pendingAdmin: newPendingAdmin });
+            revert CygnusNebulaOracle__PendingAdminAlreadySet({pendingAdmin: newPendingAdmin});
         }
 
         // Assign address of the requested admin
@@ -423,7 +415,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     function setOracleAdmin() external override nonReentrant cygnusAdmin {
         /// @custom:error AdminCantBeZero Avoid settings the admin to the zero address
         if (pendingAdmin == address(0)) {
-            revert CygnusNebulaOracle__AdminCantBeZero({ pendingAdmin: pendingAdmin });
+            revert CygnusNebulaOracle__AdminCantBeZero({pendingAdmin: pendingAdmin});
         }
 
         // Address of the Admin up until now
@@ -439,3 +431,4 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
         emit NewOracleAdmin(oldAdmin, admin);
     }
 }
+

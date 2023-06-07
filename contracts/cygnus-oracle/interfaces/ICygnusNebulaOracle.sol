@@ -185,11 +185,6 @@ interface ICygnusNebulaOracle {
     function name() external view returns (string memory);
 
     /**
-     *  @return The symbol for this Cygnus-Chainlink Nebula oracle
-     */
-    function symbol() external view returns (string memory);
-
-    /**
      *  @return The address of the Cygnus admin
      */
     function admin() external view returns (address);
@@ -212,11 +207,15 @@ interface ICygnusNebulaOracle {
     /**
      *  @notice We use a constant to set the chainlink aggregator decimals. As stated by chainlink all decimals for tokens
      *          denominated in USD are 8 decimals. And all decimals for tokens denominated in ETH are 18 decimals. We use
-     *          USDC so we set the constant to 8 decimals, it saves about 10k gas on `lpTokenPriceUsd` call compared to
-     *          loading decimal values from oracle.
+     *          tokens denominated in USD, so we set the constant to 8 decimals.
      *  @return AGGREGATOR_DECIMALS The decimals used by Chainlink (8 for all tokens priced in USD, 18 for priced in ETH)
      */
     function AGGREGATOR_DECIMALS() external pure returns (uint256);
+
+    /**
+     *  @return The scalar used to price the token in 18 decimals (ie. 10 ** (18 - AGGREGATOR_DECIMALS))
+     */
+    function AGGREGATOR_SCALAR() external pure returns (uint256);
 
     /**
      *  @return How many LP Token pairs' prices are being tracked by this oracle

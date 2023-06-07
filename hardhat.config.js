@@ -1,16 +1,54 @@
-require("@nomicfoundation/hardhat-toolbox")
-require("hardhat-contract-sizer")
+require("@nomicfoundation/hardhat-chai-matchers");
+require("@nomicfoundation/hardhat-toolbox");
+require("hardhat-contract-sizer");
+
+const optimizerSettings = {
+    enabled: true,
+    runs: 1000000,
+    details: {
+        // The peephole optimizer is always on if no details are given,
+        // use details to switch it off.
+        peephole: true,
+        // The inliner is always on if no details are given,
+        // use details to switch it off.
+        inliner: true,
+        // The unused jumpdest remover is always on if no details are given,
+        // use details to switch it off.
+        jumpdestRemover: true,
+        // Sometimes re-orders literals in commutative operations.
+        orderLiterals: true,
+        // Removes duplicate code blocks
+        deduplicate: true,
+        // Common subexpression elimination, this is the most complicated step but
+        // can also provide the largest gain.
+        cse: true,
+        // Optimize representation of literal numbers and strings in code.
+        constantOptimizer: true,
+        yulDetails: {
+            stackAllocation: true,
+            optimizerSteps:
+                "dhfoDgvulfnTUtnIf[xa[r]EscLMcCTUtTOntnfDIulLculVcul[j]Tpeulxa[rul]xa[r]cLgvifCTUca[r]LSsTOtfDnca[r]Iulc]jmul[jul]VcTOculjmul",
+        },
+    },
+};
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
     solidity: {
-        version: "0.8.4",
-        settings: {
-            optimizer: {
-                enabled: true,
-                runs: 1,
+        compilers: [
+            {
+                version: "0.8.17",
+                settings: {
+                    viaIR: true,
+                    optimizer: {
+                        ...optimizerSettings,
+                    },
+                    metadata: {
+                        bytecodeHash: "none",
+                    },
+                },
             },
-        },
+        ],
     },
     defaultNetwork: "localhost",
     networks: {
@@ -47,7 +85,7 @@ module.exports = {
         },
         // Optimism
         optimism: {
-            url: "https://opt-mainnet.g.alchemy.com/v2/mk0t_MMXVRcflkZQ4wKGjy4l2nmgHevW",
+            url: "https://rpc.ankr.com/optimism",
             chainId: 10,
         },
         bsc: {
@@ -55,4 +93,8 @@ module.exports = {
             chainId: 56,
         },
     },
-}
+    mocha: {
+        timeout: 100000000,
+    },
+};
+
