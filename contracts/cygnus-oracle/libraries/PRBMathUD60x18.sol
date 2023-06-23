@@ -17,12 +17,10 @@ library PRBMathUD60x18 {
     uint256 internal constant LOG2_E = 1_442695040888963407;
 
     /// @dev The maximum value an unsigned 60.18-decimal fixed-point number can have.
-    uint256 internal constant MAX_UD60x18 =
-        115792089237316195423570985008687907853269984665640564039457_584007913129639935;
+    uint256 internal constant MAX_UD60x18 = 115792089237316195423570985008687907853269984665640564039457_584007913129639935;
 
     /// @dev The maximum whole value an unsigned 60.18-decimal fixed-point number can have.
-    uint256 internal constant MAX_WHOLE_UD60x18 =
-        115792089237316195423570985008687907853269984665640564039457_000000000000000000;
+    uint256 internal constant MAX_WHOLE_UD60x18 = 115792089237316195423570985008687907853269984665640564039457_000000000000000000;
 
     /// @dev How many trailing decimals can be represented.
     uint256 internal constant SCALE = 1e18;

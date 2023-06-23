@@ -1,4 +1,39 @@
-// SPDX-License-Identifier: Unlicensed
+//  SPDX-License-Identifier: AGPL-3.0-or-later
+//
+//  CygnusNebulaOracle.sol
+//
+//  Copyright (C) 2023 CygnusDAO
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU Affero General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU Affero General Public License for more details.
+//
+//  You should have received a copy of the GNU Affero General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+/*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    
+           █████████                🛸         🛸                              🛸          .                    
+     🛸   ███░░░░░███                                              📡                                     🌔   
+         ███     ░░░  █████ ████  ███████ ████████   █████ ████  █████        ⠀
+        ░███         ░░███ ░███  ███░░███░░███░░███ ░░███ ░███  ███░░      .     .⠀        🛰️   .             
+        ░███          ░███ ░███ ░███ ░███ ░███ ░███  ░███ ░███ ░░█████       ⠀
+        ░░███     ███ ░███ ░███ ░███ ░███ ░███ ░███  ░███ ░███  ░░░░███              .             .           
+         ░░█████████  ░░███████ ░░███████ ████ █████ ░░████████ ██████       -----========*⠀
+          ░░░░░░░░░    ░░░░░███  ░░░░░███░░░░ ░░░░░   ░░░░░░░░ ░░░░░░            .                            .
+                       ███ ░███  ███ ░███                .                 .         🛸           ⠀             
+         .    🛸*     ░░██████  ░░██████   .    🛸                     🛰️            -----=========*                 
+                       ░░░░░░    ░░░░░░                                               🛸  ⠀
+           .                            .       .             🛰️         .                          
+    
+        CYGNUS LP ORACLE (Constant Product LP) - https://cygnusdao.finance                                                          .                     .
+    ═══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
 pragma solidity >=0.8.17;
 
 // Dependencies
@@ -113,7 +148,6 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
      *         token is USDC, the oracle will return prices with 6 decimals. If the denomination token is DAI,
      *         the oracle will return prices with 18 decimals.
      *  @param denominationPrice The price aggregator for the denomination token.
-     *        This is the token that the LP Token will be priced in.
      */
     constructor(IERC20 denomination, AggregatorV3Interface denominationPrice) {
         // Assign the admin
@@ -431,4 +465,3 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
         emit NewOracleAdmin(oldAdmin, admin);
     }
 }
-

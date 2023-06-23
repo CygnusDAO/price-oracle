@@ -1,4 +1,21 @@
-// SPDX-License-Identifier: Unlicensed
+//  SPDX-License-Identifier: AGPL-3.0-or-later
+//
+//  CygnusNebulaOracle.sol
+//
+//  Copyright (C) 2023 CygnusDAO
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU Affero General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU Affero General Public License for more details.
+//
+//  You should have received a copy of the GNU Affero General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.17;
 
 // Interfaces
@@ -267,7 +284,7 @@ interface ICygnusNebulaOracle {
      *  @param lpTokenPair The address of the LP Token
      *  @return lpTokenPrice The price of the LP Token denominated in denomination token
      */
-    function lpTokenPriceUsd(address lpTokenPair) external returns (uint256 lpTokenPrice);
+    function lpTokenPriceUsd(address lpTokenPair) external view returns (uint256 lpTokenPrice);
 
     /**
      *  @notice Gets the latest price of the LP Token's token0 and token1 denominated in denomination token

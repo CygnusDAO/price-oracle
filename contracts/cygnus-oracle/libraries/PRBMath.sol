@@ -113,8 +113,7 @@ library PRBMath {
     uint256 internal constant SCALE_LPOTD = 262144;
 
     /// @dev SCALE inverted mod 2^256.
-    uint256 internal constant SCALE_INVERSE =
-        78156646155174841979727994598816262306175212592076161876661_508869554232690281;
+    uint256 internal constant SCALE_INVERSE = 78156646155174841979727994598816262306175212592076161876661_508869554232690281;
 
     /// FUNCTIONS ///
 
@@ -341,35 +340,35 @@ library PRBMath {
     /// @param x The uint256 number for which to find the index of the most significant bit.
     /// @return msb The index of the most significant bit as an uint256.
     function mostSignificantBit(uint256 x) internal pure returns (uint256 msb) {
-        if (x >= 2**128) {
+        if (x >= 2 ** 128) {
             x >>= 128;
             msb += 128;
         }
-        if (x >= 2**64) {
+        if (x >= 2 ** 64) {
             x >>= 64;
             msb += 64;
         }
-        if (x >= 2**32) {
+        if (x >= 2 ** 32) {
             x >>= 32;
             msb += 32;
         }
-        if (x >= 2**16) {
+        if (x >= 2 ** 16) {
             x >>= 16;
             msb += 16;
         }
-        if (x >= 2**8) {
+        if (x >= 2 ** 8) {
             x >>= 8;
             msb += 8;
         }
-        if (x >= 2**4) {
+        if (x >= 2 ** 4) {
             x >>= 4;
             msb += 4;
         }
-        if (x >= 2**2) {
+        if (x >= 2 ** 2) {
             x >>= 2;
             msb += 2;
         }
-        if (x >= 2**1) {
+        if (x >= 2 ** 1) {
             // No need to shift x any more.
             msb += 1;
         }
@@ -390,11 +389,7 @@ library PRBMath {
     /// @param y The multiplier as an uint256.
     /// @param denominator The divisor as an uint256.
     /// @return result The result as an uint256.
-    function mulDiv(
-        uint256 x,
-        uint256 y,
-        uint256 denominator
-    ) internal pure returns (uint256 result) {
+    function mulDiv(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 result) {
         // 512-bit multiply [prod1 prod0] = x * y. Compute the product mod 2^256 and mod 2^256 - 1, then use
         // use the Chinese Remainder Theorem to reconstruct the 512 bit result. The result is stored in two 256
         // variables such that product = prod1 * 2^256 + prod0.
@@ -547,11 +542,7 @@ library PRBMath {
     /// @param y The multiplier as an int256.
     /// @param denominator The divisor as an int256.
     /// @return result The result as an int256.
-    function mulDivSigned(
-        int256 x,
-        int256 y,
-        int256 denominator
-    ) internal pure returns (int256 result) {
+    function mulDivSigned(int256 x, int256 y, int256 denominator) internal pure returns (int256 result) {
         if (x == type(int256).min || y == type(int256).min || denominator == type(int256).min) {
             revert PRBMath__MulDivSignedInputTooSmall();
         }
@@ -644,5 +635,4 @@ library PRBMath {
             return result >= roundedDownResult ? roundedDownResult : result;
         }
     }
-
 }

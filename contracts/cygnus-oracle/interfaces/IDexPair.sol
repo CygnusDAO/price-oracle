@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Unlicensed
+// SPDX-License-Identifier: Unlicense
 pragma solidity >=0.8.17;
 
 /// @notice Interface for UniV2 pairs
@@ -91,8 +91,5 @@ interface IDexPair {
      * @return t0 The address of the first token in the pair.
      * @return t1 The address of the second token in the pair.
      */
-    function metadata()
-        external
-        view
-        returns (uint256 dec0, uint256 dec1, uint256 r0, uint256 r1, bool _stable, address t0, address t1);
+    function metadata() external view returns (uint256 dec0, uint256 dec1, uint256 r0, uint256 r1, bool _stable, address t0, address t1);
 }
