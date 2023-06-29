@@ -187,11 +187,6 @@ interface ICygnusNebula {
     function AGGREGATOR_SCALAR() external pure returns (uint256);
 
     /**
-     *  @return S A non-reentrant function in the underlying LP pair to ensure we are not within the pair's context
-     */
-    function S() external pure returns (bytes4);
-
-    /**
      *  @return How many LP Token pairs' prices are being tracked by this oracle
      */
     function nebulaSize() external view returns (uint88);
@@ -215,6 +210,11 @@ interface ICygnusNebula {
      *  @return nebulaRegistry The address of the nebula registry
      */
     function nebulaRegistry() external view returns (address);
+    
+    /**
+     *  @return sx The selector of a non-reentrant function in the underlying LP pair to ensure we are not within the pair's context
+     */
+    function sx() external view returns (bytes4);
 
     /*  ────────────────────────────────────────────── External ───────────────────────────────────────────────  */
 

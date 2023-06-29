@@ -114,11 +114,6 @@ contract CygnusNebula is ICygnusNebula {
     /**
      *  @inheritdoc ICygnusNebula
      */
-    bytes4 public constant S = IDexPair.mint.selector;
-
-    /**
-     *  @inheritdoc ICygnusNebula
-     */
     IERC20 public immutable override denominationToken;
 
     /**
@@ -135,6 +130,11 @@ contract CygnusNebula is ICygnusNebula {
      *  @inheritdoc ICygnusNebula
      */
     address public immutable nebulaRegistry;
+    
+    /**
+     *  @inheritdoc ICygnusNebula
+     */
+    bytes4 public immutable sx;
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             3. CONSTRUCTOR
@@ -160,20 +160,14 @@ contract CygnusNebula is ICygnusNebula {
 
         // Set the price aggregator for the denomination token
         denominationAggregator = AggregatorV3Interface(denominationPrice);
+
+        // Deposit function of hypervisor - see `context` modifier
+        sx = IDexPair.mint.selector;
     }
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             4. MODIFIERS
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
-
-    /**
-     *  @custom:modifier onlyRegistry Oracles can only be initialized from the registry
-     */
-    modifier onlyRegistry() {
-        // If msg.sender is not registry revert
-        isNebulaRegistry();
-        _;
-    }
 
     /**
      *  @dev Ensure we are not in the Liquidity Token`s context when `lpTokenPriceUsd` function is called, by
@@ -188,9 +182,18 @@ contract CygnusNebula is ICygnusNebula {
         // function mint(uint256) external returns (uint256) {}
         //
         // This staticcall always reverts, but we need to make sure it doesn't fail due to a re-entrancy attack.
-        (, bytes memory revertData) = lpTokenPair.staticcall{gas: 10_000}(abi.encodeWithSelector(S, 0));
+        (, bytes memory revertData) = lpTokenPair.staticcall{gas: 10_000}(abi.encodeWithSelector(sx, 0));
         /// @custom:error AlreadyInContext Avoid if we are already in the underlying's context
         if (revertData.length != 0) revert CygnusNebulaOracle__AlreadyInContext();
+        _;
+    }
+
+    /**
+     *  @custom:modifier onlyRegistry Oracles can only be initialized from the registry
+     */
+    modifier onlyRegistry() {
+        // If msg.sender is not registry revert
+        isNebulaRegistry();
         _;
     }
 
