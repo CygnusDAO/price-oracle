@@ -1,6 +1,6 @@
 //  SPDX-License-Identifier: AGPL-3.0-or-later
 //
-//  CygnusNebulaOracle.sol
+//  CygnusNebula.sol
 //
 //  Copyright (C) 2023 CygnusDAO
 //
@@ -37,8 +37,7 @@
 pragma solidity >=0.8.17;
 
 // Dependencies
-import {ICygnusNebulaOracle} from "./interfaces/ICygnusNebulaOracle.sol";
-import {ReentrancyGuard} from "./utils/ReentrancyGuard.sol";
+import {ICygnusNebula} from "./interfaces/ICygnusNebula.sol";
 
 // Libraries
 import {PRBMath, PRBMathUD60x18} from "./libraries/PRBMathUD60x18.sol";
@@ -49,7 +48,7 @@ import {IDexPair} from "./interfaces/IDexPair.sol";
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
 
 /**
- *  @title  CygnusNebulaOracle
+ *  @title  CygnusNebula
  *  @author CygnusDAO
  *  @notice Oracle used by Cygnus that returns the price of 1 LP Token in the denomination token. In case need
  *          different implementation just update the denomination variable `denominationAggregator`
@@ -59,7 +58,7 @@ import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
  *  @notice Implementation of fair lp token pricing using Chainlink price feeds
  *          https://blog.alphaventuredao.io/fair-lp-token-pricing/
  */
-contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
+contract CygnusNebula is ICygnusNebula {
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             1. LIBRARIES
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
@@ -78,64 +77,64 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     /**
      *  @notice Internal record of all initialized oracles
      */
-    mapping(address => CygnusNebula) internal nebulas;
+    mapping(address => NebulaOracle) internal nebulaOracles;
 
     /*  ─────────────────────────────────────────────── Public ────────────────────────────────────────────────  */
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     address[] public override allNebulas;
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     string public constant override name = "Cygnus-Nebula: Constant-Product LP Oracle";
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     string public constant override version = "1.0.0";
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     uint256 public constant override SECONDS_PER_YEAR = 31536000;
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     uint256 public constant override AGGREGATOR_DECIMALS = 8;
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     uint256 public constant AGGREGATOR_SCALAR = 10 ** (18 - 8); // 10^(18 - AGGREGATOR_DECIMALS)
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
+     */
+    bytes4 public constant S = IDexPair.mint.selector;
+
+    /**
+     *  @inheritdoc ICygnusNebula
      */
     IERC20 public immutable override denominationToken;
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     uint8 public immutable override decimals;
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     AggregatorV3Interface public immutable override denominationAggregator;
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
-    address public override admin;
-
-    /**
-     *  @inheritdoc ICygnusNebulaOracle
-     */
-    address public override pendingAdmin;
+    address public immutable nebulaRegistry;
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             3. CONSTRUCTOR
@@ -149,9 +148,9 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
      *         the oracle will return prices with 18 decimals.
      *  @param denominationPrice The price aggregator for the denomination token.
      */
-    constructor(IERC20 denomination, AggregatorV3Interface denominationPrice) {
-        // Assign the admin
-        admin = msg.sender;
+    constructor(IERC20 denomination, AggregatorV3Interface denominationPrice, address _nebulaRegistry) {
+        // Registry
+        nebulaRegistry = _nebulaRegistry;
 
         // Set the denomination token
         denominationToken = denomination;
@@ -168,10 +167,30 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
 
     /**
-     *  @custom:modifier cygnusAdmin Modifier for admin control only 👽
+     *  @custom:modifier onlyRegistry Oracles can only be initialized from the registry
      */
-    modifier cygnusAdmin() {
-        isCygnusAdmin();
+    modifier onlyRegistry() {
+        // If msg.sender is not registry revert
+        isNebulaRegistry();
+        _;
+    }
+
+    /**
+     *  @dev Ensure we are not in the Liquidity Token`s context when `lpTokenPriceUsd` function is called, by
+     *       attempting a no-op internal balance operation. If we are already in an underlying transaction (ie a
+     *       swap, join, or exit, etc), the underlying's reentrancy protection will cause the `lpTokenPriceUsd`
+     *       function to revert, reverting any borrow or liquidation.
+     *  @custom:modifier context Assert we are not in the underlying's context
+     */
+    modifier context(address underlying) {
+        // Perform the following payable call as a staticcall:
+        //
+        // function mint(uint256) external returns (uint256) {}
+        //
+        // This staticcall always reverts, but we need to make sure it doesn't fail due to a re-entrancy attack.
+        (, bytes memory revertData) = address(underlying).staticcall{gas: 10_000}(abi.encodeWithSelector(S, 0));
+        /// @custom:error AlreadyInContext Avoid if we are already in the underlying's context
+        if (revertData.length != 0) revert CygnusNebulaOracle__AlreadyInContext();
         _;
     }
 
@@ -182,12 +201,12 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     /*  ────────────────────────────────────────────── Internal ───────────────────────────────────────────────  */
 
     /**
-     *  @notice Internal check for admin control only 👽
+     *  @notice Internal check for registry control only
      */
-    function isCygnusAdmin() internal view {
-        /// @custom:error MsgSenderNotAdmin Avoid unless caller is Cygnus Admin
-        if (msg.sender != admin) {
-            revert CygnusNebulaOracle__MsgSenderNotAdmin({sender: msg.sender});
+    function isNebulaRegistry() internal view {
+        /// @custom:error MsgSenderNotRegistry Avoid if sender is not the registry
+        if (msg.sender != nebulaRegistry) {
+            revert CygnusNebulaOracle__MsgSenderNotRegistry({sender: msg.sender});
         }
     }
 
@@ -220,14 +239,14 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     /*  ─────────────────────────────────────────────── Public ────────────────────────────────────────────────  */
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
-    function getNebula(address lpTokenPair) public view override returns (CygnusNebula memory) {
-        return nebulas[lpTokenPair];
+    function getNebulaOracle(address lpTokenPair) public view override returns (NebulaOracle memory) {
+        return nebulaOracles[lpTokenPair];
     }
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     function nebulaSize() public view override returns (uint88) {
         // Return how many LP Tokens we are tracking
@@ -235,7 +254,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     }
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     function getAnnualizedBaseRate(
         uint256 exchangeRateLast,
@@ -264,7 +283,7 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     /*  ────────────────────────────────────────────── External ───────────────────────────────────────────────  */
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     function denominationTokenPrice() external view override returns (uint256) {
         // Price of the denomination token in 18 decimals
@@ -275,32 +294,32 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     }
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
-    function lpTokenPriceUsd(address lpTokenPair) external view override returns (uint256 lpTokenPrice) {
+    function lpTokenPriceUsd(address lpTokenPair) external view override context(lpTokenPair) returns (uint256 lpTokenPrice) {
         // Load to storage for gas savings
-        CygnusNebula storage cygnusNebula = nebulas[lpTokenPair];
+        NebulaOracle storage nebulaOracle = nebulaOracles[lpTokenPair];
 
         /// @custom:error PairNotInitialized Avoid getting price unless lpTokenPair's price is being tracked
-        if (!cygnusNebula.initialized) {
+        if (!nebulaOracle.initialized) {
             revert CygnusNebulaOracle__PairNotInitialized({lpTokenPair: lpTokenPair});
         }
 
         // 1. Get price of each of the LP token assets adjusted to 18 decimals
         // Price of token0
-        uint256 price0 = getPriceInternal(cygnusNebula.priceFeeds[0]);
+        uint256 price0 = getPriceInternal(nebulaOracle.priceFeeds[0]);
 
         // Price of token1
-        uint256 price1 = getPriceInternal(cygnusNebula.priceFeeds[1]);
+        uint256 price1 = getPriceInternal(nebulaOracle.priceFeeds[1]);
 
         // 2. Get the reserves of tokenA and tokenB to compute k
         (uint112 reserves0, uint112 reserves1, ) = IDexPair(lpTokenPair).getReserves();
 
         // Adjusted with token0 decimals
-        uint256 value0 = (price0 * reserves0) / (10 ** cygnusNebula.poolTokensDecimals[0]);
+        uint256 value0 = (price0 * reserves0) / (10 ** nebulaOracle.poolTokensDecimals[0]);
 
         // Adjust with token1 decimals
-        uint256 value1 = (price1 * reserves1) / (10 ** cygnusNebula.poolTokensDecimals[1]);
+        uint256 value1 = (price1 * reserves1) / (10 ** nebulaOracle.poolTokensDecimals[1]);
 
         // 3. Get total Supply (always 18 decimals)
         uint256 supply = IDexPair(lpTokenPair).totalSupply();
@@ -317,14 +336,14 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     }
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      */
     function assetPricesUsd(address lpTokenPair) external view override returns (uint256[] memory) {
         // Load to storage for gas savings
-        CygnusNebula storage cygnusNebula = nebulas[lpTokenPair];
+        NebulaOracle storage nebulaOracle = nebulaOracles[lpTokenPair];
 
         /// @custom:error PairNotInitialized Avoid getting price unless lpTokenPair's price is being tracked
-        if (!cygnusNebula.initialized) {
+        if (!nebulaOracle.initialized) {
             revert CygnusNebulaOracle__PairNotInitialized({lpTokenPair: lpTokenPair});
         }
 
@@ -332,12 +351,12 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
         uint256 denomPrice = getPriceInternal(denominationAggregator);
 
         // Create new array of poolTokens.length to return
-        uint256[] memory prices = new uint256[](cygnusNebula.poolTokens.length);
+        uint256[] memory prices = new uint256[](nebulaOracle.poolTokens.length);
 
         // Loop through each token
-        for (uint256 i = 0; i < cygnusNebula.poolTokens.length; i++) {
+        for (uint256 i = 0; i < nebulaOracle.poolTokens.length; i++) {
             // Get the price from chainlink from cached price feeds
-            uint256 assetPrice = getPriceInternal(cygnusNebula.priceFeeds[i]);
+            uint256 assetPrice = getPriceInternal(nebulaOracle.priceFeeds[i]);
 
             // Express asset price in denom token
             prices[i] = assetPrice.div(denomPrice * 10 ** (18 - decimals));
@@ -354,18 +373,15 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
     /*  ────────────────────────────────────────────── External ───────────────────────────────────────────────  */
 
     /**
-     *  @inheritdoc ICygnusNebulaOracle
+     *  @inheritdoc ICygnusNebula
      *  @custom:security non-reentrant only-admin
      */
-    function initializeNebula(
-        address lpTokenPair,
-        AggregatorV3Interface[] calldata aggregators
-    ) external override nonReentrant cygnusAdmin {
+    function initializeNebulaOracle(address lpTokenPair, AggregatorV3Interface[] calldata aggregators) external override onlyRegistry {
         // Load the CygnusNebula instance for the LP Token pair into storage
-        CygnusNebula storage cygnusNebula = nebulas[lpTokenPair];
+        NebulaOracle storage nebulaOracle = nebulaOracles[lpTokenPair];
 
         // If the LP Token pair is already being tracked by an oracle, revert with an error message
-        if (cygnusNebula.initialized) {
+        if (nebulaOracle.initialized) {
             revert CygnusNebulaOracle__PairAlreadyInitialized({lpTokenPair: lpTokenPair});
         }
 
@@ -394,74 +410,33 @@ contract CygnusNebulaOracle is ICygnusNebulaOracle, ReentrancyGuard {
         }
 
         // Assign an ID to the new oracle
-        cygnusNebula.oracleId = nebulaSize();
+        nebulaOracle.oracleId = nebulaSize();
 
         // Set the user-friendly name of the new oracle to the name of the LP Token pair
-        cygnusNebula.name = IERC20(lpTokenPair).name();
+        nebulaOracle.name = IERC20(lpTokenPair).name();
 
         // Store the address of the LP Token pair
-        cygnusNebula.underlying = lpTokenPair;
+        nebulaOracle.underlying = lpTokenPair;
 
         // Store the addresses of the tokens in the LP Token pair
-        cygnusNebula.poolTokens = poolTokens;
+        nebulaOracle.poolTokens = poolTokens;
 
         // Store the number of decimals for each token in the LP Token pair
-        cygnusNebula.poolTokensDecimals = tokenDecimals;
+        nebulaOracle.poolTokensDecimals = tokenDecimals;
 
         // Store the price aggregator interfaces for the tokens in the LP Token pair
-        cygnusNebula.priceFeeds = aggregators;
+        nebulaOracle.priceFeeds = aggregators;
 
         // Store the decimals for each aggregator
-        cygnusNebula.priceFeedsDecimals = priceDecimals;
+        nebulaOracle.priceFeedsDecimals = priceDecimals;
 
         // Set the status of the new oracle to initialized
-        cygnusNebula.initialized = true;
+        nebulaOracle.initialized = true;
 
         // Add the LP Token pair to the list of all tracked LP Token pairs
         allNebulas.push(lpTokenPair);
 
         /// @custom:event InitializeCygnusNebula
-        emit InitializeCygnusNebula(true, cygnusNebula.oracleId, lpTokenPair, poolTokens, tokenDecimals, aggregators, priceDecimals);
-    }
-
-    /**
-     *  @inheritdoc ICygnusNebulaOracle
-     *  @custom:security non-reentrant only-admin
-     */
-    function setOraclePendingAdmin(address newPendingAdmin) external override nonReentrant cygnusAdmin {
-        // Pending admin initial is always zero
-        /// @custom:error PendingAdminAlreadySet Avoid setting the same pending admin twice
-        if (newPendingAdmin == pendingAdmin) {
-            revert CygnusNebulaOracle__PendingAdminAlreadySet({pendingAdmin: newPendingAdmin});
-        }
-
-        // Assign address of the requested admin
-        pendingAdmin = newPendingAdmin;
-
-        /// @custom:event NewOraclePendingAdmin
-        emit NewOraclePendingAdmin(admin, newPendingAdmin);
-    }
-
-    /**
-     *  @inheritdoc ICygnusNebulaOracle
-     *  @custom:security non-reentrant only-admin
-     */
-    function setOracleAdmin() external override nonReentrant cygnusAdmin {
-        /// @custom:error AdminCantBeZero Avoid settings the admin to the zero address
-        if (pendingAdmin == address(0)) {
-            revert CygnusNebulaOracle__AdminCantBeZero({pendingAdmin: pendingAdmin});
-        }
-
-        // Address of the Admin up until now
-        address oldAdmin = admin;
-
-        // Assign new admin
-        admin = pendingAdmin;
-
-        // Gas refund
-        delete pendingAdmin;
-
-        // @custom:event NewOracleAdmin
-        emit NewOracleAdmin(oldAdmin, admin);
+        emit InitializeNebulaOracle(true, nebulaOracle.oracleId, lpTokenPair, poolTokens, tokenDecimals, aggregators, priceDecimals);
     }
 }

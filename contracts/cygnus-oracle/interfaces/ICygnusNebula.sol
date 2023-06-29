@@ -1,6 +1,6 @@
 //  SPDX-License-Identifier: AGPL-3.0-or-later
 //
-//  CygnusNebulaOracle.sol
+//  ICygnusNebula.sol
 //
 //  Copyright (C) 2023 CygnusDAO
 //
@@ -23,10 +23,10 @@ import {AggregatorV3Interface} from "./AggregatorV3Interface.sol";
 import {IERC20} from "./IERC20.sol";
 
 /**
- *  @title ICygnusNebulaOracle Interface to interact with Cygnus' LP Oracle
+ *  @title ICygnusNebula Interface to interact with Cygnus' LP Oracle
  *  @author CygnusDAO
  */
-interface ICygnusNebulaOracle {
+interface ICygnusNebula {
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             1. CUSTOM ERRORS
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
@@ -50,58 +50,20 @@ interface ICygnusNebulaOracle {
     error CygnusNebulaOracle__PairNotInitialized(address lpTokenPair);
 
     /**
-     *  @dev Reverts when attempting to access admin only methods
+     *  @dev Reverts when the initializer of the oracle is not the registry address
      *
-     *  @param sender The address of msg.sender
+     *  @param sender The msg.sender
      *
-     *  @custom:error MsgSenderNotAdmin
+     *  @custom:error MsgSenderNotRegistry
      */
-    error CygnusNebulaOracle__MsgSenderNotAdmin(address sender);
+    error CygnusNebulaOracle__MsgSenderNotRegistry(address sender);
 
     /**
-     *  @dev Reverts when attempting to set the admin if the pending admin is the zero address
+     *  @dev Prevents cross-contracnt reentrancy
      *
-     *  @param pendingAdmin The address of the pending oracle admin
-     *
-     *  @custom:error AdminCantBeZero
+     *  @custom:error AlreadyInContext
      */
-    error CygnusNebulaOracle__AdminCantBeZero(address pendingAdmin);
-
-    /**
-     *  @dev Reverts when attempting to set the same pending admin twice
-     *
-     *  @param pendingAdmin The address of the pending oracle admin
-     *
-     *  @custom:error PendingAdminAlreadySet
-     */
-    error CygnusNebulaOracle__PendingAdminAlreadySet(address pendingAdmin);
-
-    /**
-     *  @dev Reverts when getting a record if not initialized
-     *
-     *  @param lpTokenPair The address of the LP Token for the record
-     *
-     *  @custom:error NebulaRecordNotInitialized
-     */
-    error CygnusNebulaOracle__NebulaRecordNotInitialized(address lpTokenPair);
-
-    /**
-     *  @dev Reverts when re-initializing a record
-     *
-     *  @param lpTokenPair The address of the LP Token for the record
-     *
-     *  @custom:error NebulaRecordAlreadyInitialized
-     */
-    error CygnusNebulaOracle__NebulaRecordAlreadyInitialized(address lpTokenPair);
-
-    /**
-     *  @dev Reverts when the price of an initialized `lpTokenPair` is 0
-     *
-     *  @param lpTokenPair The address of the LP Token for the record
-     *
-     *  @custom:error NebulaRecordAlreadyInitialized
-     */
-    error CygnusNebulaOracle__PriceCantBeZero(address lpTokenPair);
+    error CygnusNebulaOracle__AlreadyInContext();
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             2. CUSTOM EVENTS
@@ -120,7 +82,7 @@ interface ICygnusNebulaOracle {
      *
      *  @custom:event InitializeCygnusNebula
      */
-    event InitializeCygnusNebula(
+    event InitializeNebulaOracle(
         bool initialized,
         uint88 oracleId,
         address lpTokenPair,
@@ -167,7 +129,7 @@ interface ICygnusNebulaOracle {
      *  @custom:member priceFeeds Array of all the Chainlink price feeds for the pool tokens
      *  @custom:member priceFeedsDecimals Array of the decimals of each price feed
      */
-    struct CygnusNebula {
+    struct NebulaOracle {
         bool initialized;
         uint88 oracleId;
         string name;
@@ -184,9 +146,9 @@ interface ICygnusNebulaOracle {
      *  @notice Returns the struct record of each oracle used by Cygnus
      *
      *  @param lpTokenPair The address of the LP Token
-     *  @return cygnusNebula Struct of the oracle for the LP Token
+     *  @return nebulaOracle Struct of the oracle for the LP Token
      */
-    function getNebula(address lpTokenPair) external view returns (CygnusNebula memory cygnusNebula);
+    function getNebulaOracle(address lpTokenPair) external view returns (NebulaOracle memory nebulaOracle);
 
     /**
      *  @notice Gets the address of the LP Token that (if) is being tracked by this oracle
@@ -200,16 +162,6 @@ interface ICygnusNebulaOracle {
      *  @return The name for this Cygnus-Chainlink Nebula oracle
      */
     function name() external view returns (string memory);
-
-    /**
-     *  @return The address of the Cygnus admin
-     */
-    function admin() external view returns (address);
-
-    /**
-     *  @return The address of the new requested admin
-     */
-    function pendingAdmin() external view returns (address);
 
     /**
      *  @return The version of this oracle
@@ -235,6 +187,11 @@ interface ICygnusNebulaOracle {
     function AGGREGATOR_SCALAR() external pure returns (uint256);
 
     /**
+     *  @return S A non-reentrant function in the underlying LP pair to ensure we are not within the pair's context
+     */
+    function S() external pure returns (bytes4);
+
+    /**
      *  @return How many LP Token pairs' prices are being tracked by this oracle
      */
     function nebulaSize() external view returns (uint88);
@@ -253,6 +210,11 @@ interface ICygnusNebulaOracle {
      *  @return The address of Chainlink's denomination oracle
      */
     function denominationAggregator() external view returns (AggregatorV3Interface);
+
+    /**
+     *  @return nebulaRegistry The address of the nebula registry
+     */
+    function nebulaRegistry() external view returns (address);
 
     /*  ────────────────────────────────────────────── External ───────────────────────────────────────────────  */
 
@@ -310,23 +272,5 @@ interface ICygnusNebulaOracle {
      *
      *  @custom:security non-reentrant only-admin
      */
-    function initializeNebula(address lpTokenPair, AggregatorV3Interface[] calldata aggregators) external;
-
-    /**
-     *  @notice Admin 👽
-     *  @notice Sets a new pending admin for the Oracle
-     *
-     *  @param newOraclePendingAdmin Address of the requested Oracle Admin
-     *
-     *  @custom:security non-reentrant only-admin
-     */
-    function setOraclePendingAdmin(address newOraclePendingAdmin) external;
-
-    /**
-     *  @notice Admin 👽
-     *  @notice Sets a new admin for the Oracle
-     *
-     *  @custom:security non-reentrant only-admin
-     */
-    function setOracleAdmin() external;
+    function initializeNebulaOracle(address lpTokenPair, AggregatorV3Interface[] calldata aggregators) external;
 }

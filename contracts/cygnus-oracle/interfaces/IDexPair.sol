@@ -82,6 +82,11 @@ interface IDexPair {
     function burn(address to) external returns (uint amount0, uint amount1);
 
     /**
+     *  @dev Mints liquidity tokens
+     */
+    function mint(address to) external returns (uint liquidity);
+
+    /**
      * @dev Returns metadata information about the token pair.
      * @return dec0 The number of decimal places used by the first token in the pair.
      * @return dec1 The number of decimal places used by the second token in the pair.
