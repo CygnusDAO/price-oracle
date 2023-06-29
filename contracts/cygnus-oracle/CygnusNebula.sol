@@ -182,13 +182,13 @@ contract CygnusNebula is ICygnusNebula {
      *       function to revert, reverting any borrow or liquidation.
      *  @custom:modifier context Assert we are not in the underlying's context
      */
-    modifier context(address underlying) {
+    modifier context(address lpTokenPair) {
         // Perform the following payable call as a staticcall:
         //
         // function mint(uint256) external returns (uint256) {}
         //
         // This staticcall always reverts, but we need to make sure it doesn't fail due to a re-entrancy attack.
-        (, bytes memory revertData) = address(underlying).staticcall{gas: 10_000}(abi.encodeWithSelector(S, 0));
+        (, bytes memory revertData) = lpTokenPair.staticcall{gas: 10_000}(abi.encodeWithSelector(S, 0));
         /// @custom:error AlreadyInContext Avoid if we are already in the underlying's context
         if (revertData.length != 0) revert CygnusNebulaOracle__AlreadyInContext();
         _;
