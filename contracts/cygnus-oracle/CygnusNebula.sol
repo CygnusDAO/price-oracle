@@ -161,7 +161,7 @@ contract CygnusNebula is ICygnusNebula {
         // Set the price aggregator for the denomination token
         denominationAggregator = AggregatorV3Interface(denominationPrice);
 
-        // Deposit function of hypervisor - see `context` modifier
+        // Mint function of the Dex - see `context` modifier
         sx = IDexPair.mint.selector;
     }
 
