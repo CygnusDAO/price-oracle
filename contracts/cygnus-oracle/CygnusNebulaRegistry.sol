@@ -41,6 +41,9 @@ import {ICygnusNebulaRegistry} from "./interfaces/ICygnusNebulaRegistry.sol";
 import {ICygnusNebula} from "./interfaces/ICygnusNebula.sol";
 import {ReentrancyGuard} from "./utils/ReentrancyGuard.sol";
 
+// Libraries
+import {LibString} from "./libraries/LibString.sol";
+
 // Interfaces
 import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
 
@@ -49,7 +52,8 @@ import {AggregatorV3Interface} from "./interfaces/AggregatorV3Interface.sol";
  *  @author CygnusDAO
  *  @notice Registry of all nebulas deployed by CygnusDAO. A nebula is a contract which contains the logic to
  *          price specific Liquidity Tokens. For example, Balancer Weighted Pools requires different logic than
- *          UniswapV2 pairs to price the liquidity token, so we must deploy separate logic for each.
+ *          UniswapV2 pairs to price the liquidity token, so we must deploy separate logic for each. A nebula
+ *          oracle is a unique LP oracle within the nebula.
  *
  *          Each nebula we deploy must have this registry's address as the registry is the only one that can
  *          initialize a specific Liquidity Token in the nebula.
@@ -92,7 +96,12 @@ contract CygnusNebulaRegistry is ICygnusNebulaRegistry, ReentrancyGuard {
     /**
      *  @inheritdoc ICygnusNebulaRegistry
      */
-    string public override name = string(abi.encodePacked("Cygnus-Nebula: Oracle Registry #", block.chainid));
+    string public override name = string.concat("Cygnus: Nebula - Oracle Registry #", LibString.toString(block.chainid));
+
+    /**
+     *  @inheritdoc ICygnusNebulaRegistry
+     */
+    string public override version = "1.0.0";
 
     /**
      *  @inheritdoc ICygnusNebulaRegistry
@@ -188,15 +197,6 @@ contract CygnusNebulaRegistry is ICygnusNebulaRegistry, ReentrancyGuard {
     /**
      *  @inheritdoc ICygnusNebulaRegistry
      */
-    function getLPTokenNebulaAddress(address lpTokenPair) external view override returns (address) {
-        // Return the address of the nebula for this `lpTokenPair`
-        // If not set then returns zero address
-        return lpNebulas[lpTokenPair];
-    }
-
-    /**
-     *  @inheritdoc ICygnusNebulaRegistry
-     */
     function getLPTokenNebula(address lpTokenPair) external view override returns (CygnusNebula memory) {
         // Get the stored nebula for `lpTokenPair`
         address nebula = lpNebulas[lpTokenPair];
@@ -208,7 +208,16 @@ contract CygnusNebulaRegistry is ICygnusNebulaRegistry, ReentrancyGuard {
     /**
      *  @inheritdoc ICygnusNebulaRegistry
      */
-    function getNebulaOracle(address lpTokenPair) external view override returns (ICygnusNebula.NebulaOracle memory) {
+    function getLPTokenNebulaAddress(address lpTokenPair) external view override returns (address) {
+        // Return the address of the nebula for this `lpTokenPair`
+        // If not set then returns zero address
+        return lpNebulas[lpTokenPair];
+    }
+
+    /**
+     *  @inheritdoc ICygnusNebulaRegistry
+     */
+    function getLPTokenNebulaOracle(address lpTokenPair) external view override returns (ICygnusNebula.NebulaOracle memory) {
         // Get the stored nebula for the LP Token
         address nebula = lpNebulas[lpTokenPair];
 
@@ -223,15 +232,21 @@ contract CygnusNebulaRegistry is ICygnusNebulaRegistry, ReentrancyGuard {
         // Get the stored nebula for the LP Token
         address nebula = lpNebulas[lpTokenPair];
 
-        // Get the price of the lp token in USDC (will revert if not initialized)
-        uint256 price = ICygnusNebula(nebula).lpTokenPriceUsd(lpTokenPair);
-
-        // Not needed since we do not use this function at all in core contracts, but nice to have here anyways
-        /// @custom:error PriceCantBeZero Avoid if price is zero
-        if (price == 0) revert CygnusNebulaRegistry__PriceCantBeZero();
-
         // Return the price of the LP in the oracle`s denomination token (in our case USDC)
-        return price;
+        // IMPORTANT: Do not use this in any important contract since the oracle never does safety checks,
+        // such as assuring price != 0, etc.
+        return ICygnusNebula(nebula).lpTokenPriceUsd(lpTokenPair);
+    }
+
+    /**
+     *  @inheritdoc ICygnusNebulaRegistry
+     */
+    function getAssetPricesUsd(address lpTokenPair) external view returns (uint256[] memory) {
+        // Get the stored nebula for the LP Token
+        address nebula = lpNebulas[lpTokenPair];
+
+        // Return the price of each of the assets of the LP in the oracle`s denomination token (in our case USDC)
+        return ICygnusNebula(nebula).assetPricesUsd(lpTokenPair);
     }
 
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
@@ -244,7 +259,7 @@ contract CygnusNebulaRegistry is ICygnusNebulaRegistry, ReentrancyGuard {
      *  @inheritdoc ICygnusNebulaRegistry
      *  @custom:security only-admin 👽
      */
-    function initializeOracleInNebula(
+    function createNebulaOracle(
         uint256 nebulaId,
         address lpTokenPair,
         AggregatorV3Interface[] calldata aggregators
@@ -252,20 +267,24 @@ contract CygnusNebulaRegistry is ICygnusNebulaRegistry, ReentrancyGuard {
         // Get nebula address
         CygnusNebula storage nebula = allNebulas[nebulaId];
 
-        // Initialize nebula. Will revert if it has already been initialized
+        // Initialize nebula. Will revert if it has already been initialized and we are outside grace period
         ICygnusNebula(nebula.nebula).initializeNebulaOracle(lpTokenPair, aggregators);
 
-        // Increase total initialized oracles
-        nebula.totalOracles++;
+        // If this is the first time we initialize this oracle;
+        // Account for cases where we modify the oracle during grace period
+        if (lpNebulas[lpTokenPair] == address(0)) {
+            // Increase total initialized oracles
+            nebula.totalOracles++;
 
-        // Mapp LP Token => Nebula address
-        lpNebulas[lpTokenPair] = nebula.nebula;
+            // Mapp LP Token => Nebula address
+            lpNebulas[lpTokenPair] = nebula.nebula;
 
-        // Map Nebula address => Nebula struct
-        nebulas[nebula.nebula] = nebula;
+            // Map Nebula address => Nebula struct
+            nebulas[nebula.nebula] = nebula;
 
-        // Add lp token to the array
-        allNebulaOracles.push(lpTokenPair);
+            // Add lp token to the array
+            allNebulaOracles.push(lpTokenPair);
+        }
     }
 
     /**

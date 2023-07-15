@@ -127,6 +127,11 @@ interface ICygnusNebulaRegistry {
     function name() external view returns (string memory);
 
     /**
+     *  @return Current version of the registry
+     */
+    function version() external view returns (string memory);
+
+    /**
      *  @return The address of the Cygnus admin
      */
     function admin() external view returns (address);
@@ -191,7 +196,7 @@ interface ICygnusNebulaRegistry {
      *  @notice Get the Oracle for the LP token pair
      *  @param lpTokenPair The address of the LP Token pair
      */
-    function getNebulaOracle(address lpTokenPair) external view returns (ICygnusNebula.NebulaOracle memory);
+    function getLPTokenNebulaOracle(address lpTokenPair) external view returns (ICygnusNebula.NebulaOracle memory);
 
     /**
      *  @notice Get the price the nebula reports for `lpTokenPair`
@@ -200,9 +205,28 @@ interface ICygnusNebulaRegistry {
      */
     function getLPTokenPriceUsd(address lpTokenPair) external view returns (uint256);
 
+    /**
+     *  @notice Get the price of each asset of the LP
+     *  @param lpTokenPair The address of the LP Token pair
+     *  @return prices Array of prices of each asset from the LP (can be 2 or more ie Balancer/Beethovenx)
+     */
+    function getAssetPricesUsd(address lpTokenPair) external view returns (uint256[] memory prices);
+
     /*  ═══════════════════════════════════════════════════════════════════════════════════════════════════════ 
             4. NON-CONSTANT FUNCTIONS
         ═══════════════════════════════════════════════════════════════════════════════════════════════════════  */
+
+    /**
+     *  @notice Admin 👽
+     *  @notice Initializes an oracle for the LP, mapping it to the nebula
+     *
+     *  @param nebulaId The ID of the nebula (ie. each nebula depends on the dex and the logic for calculating the LP Price)
+     *  @param lpTokenPair The address of the LP Token
+     *  @param aggregators Calldata array of Chainlink aggregators
+     *
+     *  @custom:security only-admin
+     */
+    function createNebulaOracle(uint256 nebulaId, address lpTokenPair, AggregatorV3Interface[] calldata aggregators) external;
 
     /**
      *  @notice Admin 👽
@@ -213,14 +237,6 @@ interface ICygnusNebulaRegistry {
      *  @custom:security only-admin
      */
     function createNebula(address _nebula) external;
-
-    /**
-     *  @notice Initializes an oracle for the LP, mapping it to the nebula
-     *  @param nebulaId The ID of the nebula (ie. each nebula depends on the dex and the logic for calculating the LP Price)
-     *  @param lpTokenPair The address of the LP Token
-     *  @param aggregators Calldata array of Chainlink aggregators
-     */
-    function initializeOracleInNebula(uint256 nebulaId, address lpTokenPair, AggregatorV3Interface[] calldata aggregators) external;
 
     /**
      *  @notice Admin 👽

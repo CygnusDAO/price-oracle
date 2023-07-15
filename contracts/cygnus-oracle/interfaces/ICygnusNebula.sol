@@ -43,11 +43,9 @@ interface ICygnusNebula {
     /**
      *  @dev Reverts when attempting to get the price of an LP Token that is not initialized
      *
-     *  @param lpTokenPair THe address of the LP Token we are getting the price for
-     *
      *  @custom:error PairNotInitialized
      */
-    error CygnusNebulaOracle__PairNotInitialized(address lpTokenPair);
+    error CygnusNebulaOracle__PairNotInitialized();
 
     /**
      *  @dev Reverts when the initializer of the oracle is not the registry address
@@ -138,6 +136,7 @@ interface ICygnusNebula {
         uint256[] poolTokensDecimals;
         AggregatorV3Interface[] priceFeeds;
         uint256[] priceFeedsDecimals;
+        uint256 createdAt;
     }
 
     /*  ─────────────────────────────────────────────── Public ────────────────────────────────────────────────  */
@@ -187,6 +186,16 @@ interface ICygnusNebula {
     function AGGREGATOR_SCALAR() external pure returns (uint256);
 
     /**
+     *  @return GRACE_PERIOD The period since creation we allow the oracle to be updated by admins
+     */
+    function GRACE_PERIOD() external pure returns (uint256);
+
+    /**
+     *  @return S A non-reentrant function in the underlying LP pair to ensure we are not within the pair's context
+     */
+    function S() external pure returns (bytes4);
+
+    /**
      *  @return How many LP Token pairs' prices are being tracked by this oracle
      */
     function nebulaSize() external view returns (uint88);
@@ -210,11 +219,6 @@ interface ICygnusNebula {
      *  @return nebulaRegistry The address of the nebula registry
      */
     function nebulaRegistry() external view returns (address);
-    
-    /**
-     *  @return sx The selector of a non-reentrant function in the underlying LP pair to ensure we are not within the pair's context
-     */
-    function sx() external view returns (bytes4);
 
     /*  ────────────────────────────────────────────── External ───────────────────────────────────────────────  */
 
