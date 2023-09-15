@@ -1,3 +1,6 @@
+> :warning: **All CygnusDAO oracles have been moved to a single oracle repository which contains the oracles and the oracle registry. For all oracles see <a href="https://github.com/CygnusDAO/cygnus-oracles">here</a>**.
+
+
 # Cygnus LP Oracle
 
 A fair reserves LP Oracle for UniswapV2-style AMMs using Chainlink price feeds.
